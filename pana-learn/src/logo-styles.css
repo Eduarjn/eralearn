@@ -1,0 +1,46 @@
+/* CSS específico para bordas arredondadas nos logos ERA Learn */
+
+/* Seletor específico para logos */
+img[alt="ERA Learn Logo"] {
+  border-radius: 12px !important;
+  border-top-left-radius: 12px !important;
+  border-top-right-radius: 12px !important;
+  border-bottom-left-radius: 12px !important;
+  border-bottom-right-radius: 12px !important;
+}
+
+/* Seletor por classe */
+.logo-rounded {
+  border-radius: 12px !important;
+  border-top-left-radius: 12px !important;
+  border-top-right-radius: 12px !important;
+  border-bottom-left-radius: 12px !important;
+  border-bottom-right-radius: 12px !important;
+}
+
+/* Seletor por ID */
+#login-logo,
+#sidebar-logo {
+  border-radius: 12px !important;
+  border-top-left-radius: 12px !important;
+  border-top-right-radius: 12px !important;
+  border-bottom-left-radius: 12px !important;
+  border-bottom-right-radius: 12px !important;
+}
+
+/* Seletor universal para todas as imagens de logo */
+img[src*="logotipoeralearn"],
+img[src*="logo"] {
+  border-radius: 12px !important;
+  border-top-left-radius: 12px !important;
+  border-top-right-radius: 12px !important;
+  border-bottom-left-radius: 12px !important;
+  border-bottom-right-radius: 12px !important;
+}
+
+
+
+
+
+
+

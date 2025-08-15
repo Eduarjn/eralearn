@@ -1,0 +1,207 @@
+/* =====================================================
+   TOKENS CSS - PALETA FUTURISTA NEON LIME
+   ===================================================== */
+
+:root {
+  /* ===== CORES PRIMÁRIAS (NEON LIME) ===== */
+  --accent: #CCFF00;
+  --accent-600: #B8E000;
+  --accent-300: #E6FF66;
+  --accent-glow: rgba(204, 255, 0, 0.35);
+  --ring: rgba(204, 255, 0, 0.60);
+
+  /* ===== BASE FUTURISTA/ESCURA ===== */
+  --bg: #0B0F0C;
+  --surface: #101510;
+  --surface-2: #161D16;
+  --border: #1F291E;
+  --text: #E7F5E7;
+  --muted: #9FB39F;
+
+  /* ===== ESTADOS E VARIAÇÕES ===== */
+  --surface-hover: #1A231A;
+  --surface-active: #202A20;
+  --border-hover: #2A362A;
+  --text-disabled: #6B7A6B;
+  
+  /* ===== GLASS/BLUR EFFECTS ===== */
+  --glass-bg: rgba(16, 21, 16, 0.8);
+  --glass-border: rgba(31, 41, 30, 0.3);
+  --backdrop-blur: blur(12px);
+  
+  /* ===== SHADOWS FUTURISTAS ===== */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+  --shadow-neon: 0 0 20px var(--accent-glow);
+  --shadow-focus: 0 0 0 3px var(--ring);
+  
+  /* ===== TRANSITIONS ===== */
+  --transition-fast: 150ms ease-out;
+  --transition-normal: 200ms ease-out;
+  --transition-slow: 300ms ease-out;
+  
+  /* ===== SIDEBAR DIMENSIONS ===== */
+  --sidebar-expanded: 280px;
+  --sidebar-collapsed: 72px;
+  --sidebar-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== REDUCED MOTION ===== */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-fast: 0ms;
+    --transition-normal: 0ms;
+    --transition-slow: 0ms;
+    --sidebar-transition: 0ms;
+  }
+}
+
+/* ===== UTILITY CLASSES ===== */
+.bg-futuristic {
+  background-color: var(--bg);
+}
+
+.bg-surface {
+  background-color: var(--surface);
+}
+
+.bg-surface-2 {
+  background-color: var(--surface-2);
+}
+
+.bg-glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--backdrop-blur);
+  border: 1px solid var(--glass-border);
+}
+
+.text-futuristic {
+  color: var(--text);
+}
+
+.text-muted {
+  color: var(--muted);
+}
+
+.border-futuristic {
+  border-color: var(--border);
+}
+
+.border-accent {
+  border-color: var(--accent);
+}
+
+.shadow-neon {
+  box-shadow: var(--shadow-neon);
+}
+
+.shadow-focus {
+  box-shadow: var(--shadow-focus);
+}
+
+/* ===== FOCUS STATES ===== */
+.focus-neon:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  outline-offset: 2px;
+}
+
+/* ===== GLOW EFFECTS ===== */
+.glow-accent {
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.glow-accent-hover:hover {
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+/* ===== SIDEBAR SPECIFIC ===== */
+.sidebar-transition {
+  transition: width var(--sidebar-transition);
+}
+
+.sidebar-content-transition {
+  transition: opacity var(--sidebar-transition), transform var(--sidebar-transition);
+}
+
+/* ===== BUTTON STYLES ===== */
+.btn-futuristic {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--text);
+  transition: all var(--transition-normal);
+}
+
+.btn-futuristic:hover {
+  background: rgba(204, 255, 0, 0.1);
+  box-shadow: 0 0 0 6px var(--accent-glow);
+}
+
+.btn-futuristic:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* ===== CARD STYLES ===== */
+.card-futuristic {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+}
+
+.card-futuristic:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
+}
+
+/* ===== INPUT STYLES ===== */
+.input-futuristic {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  transition: all var(--transition-normal);
+}
+
+.input-futuristic:focus {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-focus);
+}
+
+/* ===== SCROLLBAR STYLES ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
+
+/* ===== SELECTION STYLES ===== */
+::selection {
+  background: var(--accent-glow);
+  color: var(--text);
+}
+
+::-moz-selection {
+  background: var(--accent-glow);
+  color: var(--text);
+}
+
+
+
+
+
+
+

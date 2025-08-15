@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Final - Erro 500 unexpected_failure</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button.danger {
+            background-color: #dc3545;
+        }
+        button.danger:hover {
+            background-color: #c82333;
+        }
+        button.success {
+            background-color: #28a745;
+        }
+        button.success:hover {
+            background-color: #218838;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.success {
+            background-color: #28a745;
+            color: white;
+        }
+        .status.error {
+            background-color: #dc3545;
+            color: white;
+        }
+        .status.warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Teste Final - Erro 500 unexpected_failure</h1>
+        <p>Esta página testa se o erro 500 foi definitivamente corrigido no seu projeto Supabase Cloud.</p>
+        
+        <div style="margin-bottom: 30px;">
+            <h3>📋 Status do Sistema</h3>
+            <div class="grid">
+                <div class="card">
+                    <p><strong>Conexão Supabase:</strong> <span id="connectionStatus" class="status warning">Verificando...</span></p>
+                    <p><strong>Projeto ID:</strong> <span id="projectId">oqoxhavdhrgdjvxvajze</span></p>
+                </div>
+                <div class="card">
+                    <p><strong>URL:</strong> <span id="supabaseUrl">https://oqoxhavdhrgdjvxvajze.supabase.co</span></p>
+                    <p><strong>Status do Teste:</strong> <span id="testStatus" class="status warning">Aguardando...</span></p>
+                </div>
+            </div>
+        </div>
+        
+        <form id="testForm">
+            <div class="form-group">
+                <label for="nome">Nome Completo:</label>
+                <input type="text" id="nome" name="nome" value="Usuário Teste Final" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" value="teste-final-500@exemplo.com" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Senha:</label>
+                <input type="password" id="password" name="password" value="123456" required minlength="6">
+            </div>
+            
+            <div class="form-group">
+                <label for="tipo_usuario">Tipo de Usuário:</label>
+                <select id="tipo_usuario" name="tipo_usuario">
+                    <option value="cliente">Cliente</option>
+                    <option value="admin">Administrador</option>
+                </select>
+            </div>
+            
+            <button type="submit">🧪 Testar Cadastro</button>
+            <button type="button" onclick="testConnection()">🔍 Testar Conexão</button>
+            <button type="button" onclick="testTableAccess()">📊 Testar Acesso à Tabela</button>
+            <button type="button" onclick="clearLogs()" class="danger">🗑️ Limpar Logs</button>
+        </form>
+        
+        <div id="result"></div>
+        
+        <div style="margin-top: 30px;">
+            <h3>📊 Logs de Teste</h3>
+            <div id="logs" class="log"></div>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <h3>📋 Instruções</h3>
+            <div class="info">
+                <p><strong>1. Execute o script SQL:</strong> Use o arquivo <code>fix-500-error-specific.sql</code> no SQL Editor do Supabase</p>
+                <p><strong>2. Teste a conexão:</strong> Clique em "Testar Conexão" para verificar se o Supabase está acessível</p>
+                <p><strong>3. Teste o acesso à tabela:</strong> Clique em "Testar Acesso à Tabela" para verificar se a tabela usuarios está acessível</p>
+                <p><strong>4. Teste o cadastro:</strong> Clique em "Testar Cadastro" para verificar se o erro 500 foi resolvido</p>
+                <p><strong>5. Verifique os logs:</strong> Os logs aparecerão na seção abaixo</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Supabase Cloud
+        const SUPABASE_URL = 'https://oqoxhavdhrgdjvxvajze.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Função para adicionar logs
+        function addLog(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+        
+        // Função para limpar logs
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+            addLog('Logs limpos');
+        }
+        
+        // Função para atualizar status
+        function updateStatus(elementId, status, message) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${status}`;
+        }
+        
+        // Testar conexão com Supabase
+        async function testConnection() {
+            addLog('🔍 Testando conexão com Supabase...');
+            updateStatus('connectionStatus', 'warning', 'Testando...');
+            
+            try {
+                const { data, error } = await supabase.from('usuarios').select('count').limit(1);
+                
+                if (error) {
+                    addLog(`❌ Erro de conexão: ${error.message}`);
+                    updateStatus('connectionStatus', 'error', 'Erro de conexão');
+                } else {
+                    addLog('✅ Conexão com Supabase estabelecida com sucesso');
+                    updateStatus('connectionStatus', 'success', 'Conectado');
+                }
+            } catch (err) {
+                addLog(`❌ Erro inesperado: ${err.message}`);
+                updateStatus('connectionStatus', 'error', 'Erro inesperado');
+            }
+        }
+        
+        // Testar acesso à tabela usuarios
+        async function testTableAccess() {
+            addLog('📊 Testando acesso à tabela usuarios...');
+            
+            try {
+                // Teste 1: Contar usuários
+                const { data: countData, error: countError } = await supabase
+                    .from('usuarios')
+                    .select('*', { count: 'exact', head: true });
+                
+                if (countError) {
+                    addLog(`❌ Erro ao contar usuários: ${countError.message}`);
+                } else {
+                    addLog(`✅ Acesso à tabela usuarios OK. Total de usuários: ${countData.length}`);
+                }
+                
+                // Teste 2: Tentar inserir um usuário de teste
+                const testUserId = crypto.randomUUID();
+                const { data: insertData, error: insertError } = await supabase
+                    .from('usuarios')
+                    .insert({
+                        id: testUserId,
+                        nome: 'Teste de Acesso',
+                        email: `teste-acesso-${Date.now()}@exemplo.com`,
+                        tipo_usuario: 'cliente',
+                        status: 'ativo'
+                    })
+                    .select()
+                    .single();
+                
+                if (insertError) {
+                    addLog(`❌ Erro ao inserir usuário de teste: ${insertError.message}`);
+                } else {
+                    addLog('✅ Inserção na tabela usuarios OK');
+                    
+                    // Limpar usuário de teste
+                    const { error: deleteError } = await supabase
+                        .from('usuarios')
+                        .delete()
+                        .eq('id', testUserId);
+                    
+                    if (deleteError) {
+                        addLog(`⚠️ Erro ao limpar usuário de teste: ${deleteError.message}`);
+                    } else {
+                        addLog('✅ Limpeza do usuário de teste OK');
+                    }
+                }
+                
+            } catch (err) {
+                addLog(`❌ Erro inesperado no teste de tabela: ${err.message}`);
+            }
+        }
+        
+        // Função de teste de cadastro
+        async function testSignUp(formData) {
+            const nome = formData.get('nome');
+            const email = formData.get('email');
+            const password = formData.get('password');
+            const tipo_usuario = formData.get('tipo_usuario');
+            
+            addLog(`📝 Iniciando teste de cadastro para: ${email}`);
+            addLog(`📋 Dados: Nome=${nome}, Tipo=${tipo_usuario}`);
+            
+            try {
+                // Teste de cadastro
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        emailRedirectTo: window.location.origin,
+                        data: {
+                            nome: nome,
+                            tipo_usuario: tipo_usuario
+                        }
+                    }
+                });
+                
+                if (error) {
+                    addLog(`❌ Erro no cadastro: ${error.message}`);
+                    addLog(`📊 Código de erro: ${error.status || 'N/A'}`);
+                    
+                    if (error.status === 500) {
+                        addLog('🚨 ERRO 500 DETECTADO - O problema ainda persiste!');
+                        updateStatus('testStatus', 'error', 'Erro 500 Detectado');
+                    } else {
+                        updateStatus('testStatus', 'warning', 'Erro no Cadastro');
+                    }
+                    
+                    return { success: false, error: error };
+                }
+                
+                addLog('✅ Cadastro realizado com sucesso!');
+                addLog(`📊 ID do usuário: ${data.user?.id || 'N/A'}`);
+                updateStatus('testStatus', 'success', 'Cadastro OK');
+                
+                // Verificar se o usuário foi criado na tabela usuarios
+                if (data.user) {
+                    addLog('🔍 Verificando se usuário foi criado na tabela usuarios...');
+                    
+                    const { data: profile, error: profileError } = await supabase
+                        .from('usuarios')
+                        .select('*')
+                        .eq('id', data.user.id)
+                        .single();
+                    
+                    if (profileError) {
+                        addLog(`⚠️ Erro ao buscar perfil: ${profileError.message}`);
+                    } else {
+                        addLog('✅ Usuário encontrado na tabela usuarios');
+                        addLog(`📊 Perfil: ${JSON.stringify(profile, null, 2)}`);
+                    }
+                }
+                
+                return { success: true, data: data };
+                
+            } catch (error) {
+                addLog(`❌ Erro inesperado: ${error.message}`);
+                updateStatus('testStatus', 'error', 'Erro Inesperado');
+                return { success: false, error: error };
+            }
+        }
+        
+        // Event listener do formulário
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '<div class="info">🔄 Executando teste de cadastro...</div>';
+            
+            const result = await testSignUp(formData);
+            
+            if (result.success) {
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <h4>✅ Teste de Cadastro - SUCESSO!</h4>
+                        <p><strong>Email:</strong> ${formData.get('email')}</p>
+                        <p><strong>Nome:</strong> ${formData.get('nome')}</p>
+                        <p><strong>Tipo:</strong> ${formData.get('tipo_usuario')}</p>
+                        <p><strong>ID do Usuário:</strong> ${result.data.user?.id || 'N/A'}</p>
+                        <p><strong>Status:</strong> O erro 500 foi corrigido! 🎉</p>
+                        <p><strong>Próximo passo:</strong> Teste no seu aplicativo principal</p>
+                    </div>
+                `;
+                
+                // Limpar formulário
+                e.target.reset();
+                
+            } else {
+                const errorMessage = result.error.message || 'Erro desconhecido';
+                const errorStatus = result.error.status || 'N/A';
+                
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Teste de Cadastro - FALHOU</h4>
+                        <p><strong>Erro:</strong> ${errorMessage}</p>
+                        <p><strong>Status Code:</strong> ${errorStatus}</p>
+                        ${errorStatus === 500 ? '<p><strong>🚨 ERRO 500 DETECTADO - Execute o script SQL de correção!</strong></p>' : ''}
+                        <p><strong>Próximo passo:</strong> Execute o script <code>fix-500-error-specific.sql</code></p>
+                    </div>
+                `;
+            }
+        });
+        
+        // Testar conexão ao carregar a página
+        testConnection();
+        addLog('🚀 Página de teste carregada');
+        addLog('📋 Use esta página para verificar se o erro 500 foi definitivamente corrigido');
+    </script>
+</body>
+</html> 

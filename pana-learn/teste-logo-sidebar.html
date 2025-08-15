@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Logo na Sidebar - ERA Learn</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #111827;
+            min-height: 100vh;
+            display: flex;
+        }
+        
+        .sidebar {
+            width: 256px;
+            background: #111827;
+            border-right: 1px solid #374151;
+            padding: 1rem;
+        }
+        
+                 .logo {
+             width: 100%;
+             height: 96px;
+             object-fit: contain;
+             border-radius: 12px !important;
+             border-top-left-radius: 12px !important;
+             border-top-right-radius: 12px !important;
+             border-bottom-left-radius: 12px !important;
+             border-bottom-right-radius: 12px !important;
+             cursor: pointer;
+             transition: all 0.3s ease;
+             display: block;
+         }
+         
+         .logo:hover {
+             transform: scale(1.05);
+             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+         }
+        
+        .smart-training {
+            text-align: center;
+            color: #9ca3af;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        
+        .test-info {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+        
+        .test-info h3 {
+            color: white;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .test-info p {
+            color: #d1d5db;
+            font-size: 12px;
+            margin: 4px 0;
+        }
+        
+        .status {
+            padding: 8px;
+            border-radius: 6px;
+            margin: 8px 0;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .success {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .info {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            color: white;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            color: #d1d5db;
+            font-size: 14px;
+            margin: 4px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .feature-list li:before {
+            content: "✅";
+            position: absolute;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+                 <img 
+             src="/logotipoeralearn.png" 
+             alt="ERA Learn Logo" 
+             class="logo" 
+             id="sidebar-logo"
+             onclick="window.open('https://era.com.br/', '_blank')"
+             title="Clique para visitar o site ERA"
+         />
+        <div class="smart-training">Smart Training</div>
+        
+        <div class="test-info">
+            <h3>🧪 Teste do Logo na Sidebar</h3>
+            <div id="test-results">
+                <div class="status info">Verificando logo...</div>
+            </div>
+            
+                         <h3>📋 Especificações:</h3>
+             <p><strong>Largura:</strong> 100% do espaço disponível</p>
+             <p><strong>Altura:</strong> 96px (desktop) / 80px (mobile)</p>
+             <p><strong>Preenchimento:</strong> Proporcional sem distorção</p>
+             <p><strong>Bordas:</strong> Arredondadas (12px)</p>
+             <p><strong>Interatividade:</strong> Clique para era.com.br</p>
+             <p><strong>Animação:</strong> Hover com escala e sombra</p>
+            
+                         <h3>✅ Funcionalidades:</h3>
+             <ul class="feature-list">
+                 <li>Ocupa toda a largura disponível</li>
+                 <li>Mantém proporções da imagem</li>
+                 <li>Bordas arredondadas harmoniosas</li>
+                 <li>Animação hover sutil (5% escala)</li>
+                 <li>Sombra no hover para profundidade</li>
+                 <li>Clique redireciona para era.com.br</li>
+                 <li>Tooltip informativo</li>
+                 <li>Visual limpo sem container</li>
+                 <li>Transições suaves (300ms)</li>
+             </ul>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <h1>Teste do Logo na Sidebar</h1>
+        <p>Esta página simula o comportamento do logotipo na barra lateral da aplicação ERA Learn.</p>
+        
+        <h2>Como testar:</h2>
+        <ul class="feature-list">
+            <li>Passe o mouse sobre o logo para ver a animação</li>
+            <li>Clique no logo para simular navegação</li>
+            <li>Verifique se o logo preenche todo o container</li>
+            <li>Observe as bordas arredondadas</li>
+            <li>Teste a responsividade redimensionando a janela</li>
+        </ul>
+    </div>
+
+    <script>
+        // Função para testar carregamento do logo
+        function testSidebarLogo() {
+            const logo = document.getElementById('sidebar-logo');
+            const results = document.getElementById('test-results');
+            
+            if (logo.complete) {
+                if (logo.naturalWidth > 0) {
+                    results.innerHTML = `
+                        <div class="status success">
+                            ✅ Logo carregado com sucesso!
+                        </div>
+                        <p><strong>Dimensões:</strong> ${logo.naturalWidth}x${logo.naturalHeight}px</p>
+                        <p><strong>Status:</strong> Pronto para uso na sidebar</p>
+                    `;
+                } else {
+                    results.innerHTML = `
+                        <div class="status error">
+                            ❌ Erro ao carregar logo
+                        </div>
+                        <p>Verifique se o arquivo /logotipoeralearn.png existe</p>
+                    `;
+                }
+            } else {
+                logo.onload = () => {
+                    results.innerHTML = `
+                        <div class="status success">
+                            ✅ Logo carregado com sucesso!
+                        </div>
+                        <p><strong>Dimensões:</strong> ${logo.naturalWidth}x${logo.naturalHeight}px</p>
+                        <p><strong>Status:</strong> Pronto para uso na sidebar</p>
+                    `;
+                };
+                
+                logo.onerror = () => {
+                    results.innerHTML = `
+                        <div class="status error">
+                            ❌ Erro ao carregar logo
+                        </div>
+                        <p>Verifique se o arquivo /logotipoeralearn.png existe</p>
+                    `;
+                };
+            }
+        }
+
+        // Executar teste quando a página carregar
+        window.addEventListener('load', testSidebarLogo);
+    </script>
+</body>
+</html>
