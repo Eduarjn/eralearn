@@ -93,3 +93,4 @@ ORDER BY v.ordem, v.created_at DESC;
 
 
 
+

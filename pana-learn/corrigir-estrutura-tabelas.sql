@@ -105,3 +105,4 @@ SELECT 'Agora execute o script corrigir-erros-quiz-definitivo.sql' as proximo_pa
 
 
 
+
