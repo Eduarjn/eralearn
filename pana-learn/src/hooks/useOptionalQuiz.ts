@@ -63,16 +63,16 @@ export function useOptionalQuiz(courseId: string) {
       // Primeiro, tentar usar o mapeamento específico por curso
       const { data: mappingData } = await supabase
         .from('curso_quiz_mapping')
-        .select('quiz_categoria')
+        .select('quiz_id')
         .eq('curso_id', courseId)
         .single();
 
-      if (mappingData?.quiz_categoria) {
-        // Usar a categoria mapeada
+      if (mappingData?.quiz_id) {
+        // Usar o quiz mapeado diretamente
         const { data: quizData } = await supabase
           .from('quizzes')
           .select('id')
-          .eq('categoria', mappingData.quiz_categoria)
+          .eq('id', mappingData.quiz_id)
           .eq('ativo', true)
           .single();
 

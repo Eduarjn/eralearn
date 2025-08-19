@@ -14,7 +14,7 @@ interface QuizConfig {
   id: string;
   titulo: string;
   descricao?: string;
-  categoria_id: string;
+  categoria: string;
   nota_minima: number;
   perguntas: QuizQuestion[];
   mensagem_sucesso: string;
@@ -25,297 +25,232 @@ interface CertificateData {
   id: string;
   usuario_id: string;
   curso_id: string;
-  categoria_nome: string;
+  curso_nome: string;
   nota: number;
   data_conclusao: string;
   certificado_url?: string;
   qr_code_url?: string;
 }
 
-export function useQuiz(userId: string | undefined, categoriaId: string | undefined) {
+export function useQuiz(userId: string | undefined, courseId: string | undefined) {
   const [quizConfig, setQuizConfig] = useState<QuizConfig | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isCourseCompleted, setIsCourseCompleted] = useState(false);
+  const [isQuizAvailable, setIsQuizAvailable] = useState(false);
+  const [userProgress, setUserProgress] = useState<any>(null);
   const [certificate, setCertificate] = useState<CertificateData | null>(null);
 
-  // Carregar configuração do quiz
-  const loadQuizConfig = useCallback(async () => {
-    if (!categoriaId) return;
+  // Verificar se o quiz está disponível para o usuário
+  const checkQuizAvailability = useCallback(async () => {
+    if (!userId || !courseId) return;
 
     try {
-      setLoading(true);
+      setIsLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
-        .from('quizzes')
-        .select(`
-          id, 
-          titulo, 
-          descricao,
-          nota_minima,
-          quiz_perguntas(
-            id, 
-            pergunta, 
-            opcoes, 
-            resposta_correta, 
-            explicacao, 
-            ordem
-          )
-        `)
-        .eq('categoria', categoriaId)
-        .eq('ativo', true)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      if (data) {
-        // Ordenar perguntas por ordem
-        const sortedPerguntas = data.quiz_perguntas?.sort((a, b) => a.ordem - b.ordem) || [];
-        setQuizConfig({
-          id: data.id,
-          titulo: data.titulo,
-          descricao: data.descricao,
-          categoria_id: categoriaId,
-          nota_minima: data.nota_minima,
-          perguntas: sortedPerguntas.map(p => ({
-            id: p.id,
-            pergunta: p.pergunta,
-            opcoes: p.opcoes,
-            resposta_correta: p.resposta_correta,
-            explicacao: p.explicacao,
-            ordem: p.ordem
-          })),
-          mensagem_sucesso: 'Parabéns! Você foi aprovado no quiz!',
-          mensagem_reprova: 'Continue estudando e tente novamente!'
+      // Usar função do banco para verificar se quiz está liberado
+      const { data: quizData, error: quizError } = await supabase
+        .rpc('liberar_quiz_curso', {
+          p_usuario_id: userId,
+          p_curso_id: courseId
         });
-      }
-    } catch (err) {
-      console.error('Erro ao carregar quiz config:', err);
-      setError('Erro ao carregar configuração do quiz');
-    } finally {
-      setLoading(false);
-    }
-  }, [categoriaId]);
 
-  // Verificar se o curso foi concluído
-  const checkCourseCompletion = useCallback(async () => {
-    if (!userId || !categoriaId) return;
-
-    try {
-      // Buscar todos os vídeos da categoria
-      const { data: videos, error: videosError } = await supabase
-        .from('videos')
-        .select('id, modulo_id')
-        .eq('categoria', categoriaId);
-
-      if (videosError) throw videosError;
-
-      if (!videos || videos.length === 0) {
-        setIsCourseCompleted(false);
+      if (quizError) {
+        console.error('Erro ao verificar disponibilidade do quiz:', quizError);
+        setError('Erro ao verificar disponibilidade do quiz');
         return;
       }
 
-      // Buscar progresso dos vídeos
-      const videoIds = videos.map(v => v.id);
-      // Verificar se todos os vídeos do curso foram concluídos
-      const { data: progressData, error: progressError } = await supabase
-        .from('video_progress')
-        .select('video_id, concluido')
-        .eq('user_id', userId)
-        .in('video_id', videoIds);
-
-      if (progressError) throw progressError;
-
-      // Verificar se todos os vídeos foram concluídos
-      const completedVideos = progressData?.filter(p => p.concluido) || [];
-      const allCompleted = videos.length > 0 && completedVideos.length === videos.length;
-
-      setIsCourseCompleted(allCompleted);
-
-      // Se concluído, verificar se já existe certificado
-      if (allCompleted) {
-        await checkExistingCertificate();
+      if (quizData) {
+        // Quiz está liberado, buscar configuração
+        await loadQuizConfig(quizData);
+        setIsQuizAvailable(true);
+      } else {
+        // Quiz não está liberado ainda
+        setIsQuizAvailable(false);
       }
     } catch (err) {
-      console.error('Erro ao verificar conclusão do curso:', err);
-      setError('Erro ao verificar conclusão do curso');
+      console.error('Erro ao verificar disponibilidade:', err);
+      setError('Erro ao verificar disponibilidade do quiz');
+    } finally {
+      setIsLoading(false);
     }
-  }, [userId, categoriaId]);
+  }, [userId, courseId]);
 
-  // Verificar certificado existente
-  const checkExistingCertificate = useCallback(async () => {
-    if (!userId || !categoriaId) return;
-
+  // Carregar configuração do quiz
+  const loadQuizConfig = useCallback(async (quizId: string) => {
     try {
-      const { data, error } = await supabase
+      // Buscar dados do quiz
+      const { data: quizData, error: quizError } = await supabase
+        .from('quizzes')
+        .select('*')
+        .eq('id', quizId)
+        .single();
+
+      if (quizError) throw quizError;
+
+      // Buscar perguntas do quiz
+      const { data: questionsData, error: questionsError } = await supabase
+        .from('quiz_perguntas')
+        .select('*')
+        .eq('quiz_id', quizId)
+        .order('ordem');
+
+      if (questionsError) throw questionsError;
+
+      // Buscar progresso do usuário (se existir)
+      const { data: progressData, error: progressError } = await supabase
+        .from('progresso_quiz')
+        .select('*')
+        .eq('usuario_id', userId)
+        .eq('quiz_id', quizId)
+        .single();
+
+      if (progressError && progressError.code !== 'PGRST116') {
+        console.error('Erro ao buscar progresso:', progressError);
+      }
+
+      // Buscar certificado (se existir)
+      const { data: certData, error: certError } = await supabase
         .from('certificados')
         .select('*')
         .eq('usuario_id', userId)
-        .eq('categoria_id', categoriaId)
+        .eq('curso_id', courseId)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
+      if (certError && certError.code !== 'PGRST116') {
+        console.error('Erro ao buscar certificado:', certError);
       }
 
-      setCertificate(data || null);
-    } catch (err) {
-      console.error('Erro ao verificar certificado:', err);
-    }
-  }, [userId, categoriaId]);
-
-  // Gerar certificado
-  const generateCertificate = useCallback(async (nota: number) => {
-    if (!userId || !categoriaId || !quizConfig) return null;
-
-    try {
-      // Buscar informações da categoria
-      const { data: categoria, error: catError } = await supabase
-        .from('categorias')
-        .select('nome')
-        .eq('id', categoriaId)
-        .single();
-
-      if (catError) throw catError;
-
-      // Criar certificado
-      const certificateData = {
-        usuario_id: userId,
-        categoria_id: categoriaId,
-        categoria_nome: categoria.nome,
-        nota: nota,
-        data_conclusao: new Date().toISOString(),
-        certificado_url: null, // Será gerado pelo backend
-        qr_code_url: null // Será gerado pelo backend
+      // Montar configuração do quiz
+      const config: QuizConfig = {
+        id: quizData.id,
+        titulo: quizData.titulo,
+        descricao: quizData.descricao,
+        categoria: quizData.categoria,
+        nota_minima: quizData.nota_minima,
+        perguntas: questionsData.map(q => ({
+          id: q.id,
+          pergunta: q.pergunta,
+          opcoes: q.opcoes,
+          resposta_correta: q.resposta_correta,
+          explicacao: q.explicacao,
+          ordem: q.ordem
+        })),
+        mensagem_sucesso: 'Parabéns! Você concluiu o curso com sucesso!',
+        mensagem_reprova: 'Continue estudando e tente novamente.'
       };
 
-      const { data, error } = await supabase
-        .from('certificados')
-        .insert(certificateData)
-        .select()
-        .single();
+      setQuizConfig(config);
+      setUserProgress(progressData || null);
+      setCertificate(certData || null);
 
-      if (error) throw error;
-
-      setCertificate(data);
-      return data;
     } catch (err) {
-      console.error('Erro ao gerar certificado:', err);
-      throw new Error('Erro ao gerar certificado');
+      console.error('Erro ao carregar quiz:', err);
+      setError('Erro ao carregar configuração do quiz');
     }
-  }, [userId, categoriaId, quizConfig]);
+  }, [userId, courseId]);
 
-  // Buscar quiz específico do curso
-  const fetchCourseQuiz = useCallback(async (courseId: string) => {
+  // Submeter respostas do quiz
+  const submitQuiz = useCallback(async (respostas: Record<string, number>) => {
+    if (!userId || !quizConfig) return;
+
     try {
-      setLoading(true);
+      setIsLoading(true);
       setError(null);
 
-      // Primeiro, buscar a categoria do curso
-      const { data: cursoData, error: cursoError } = await supabase
-        .from('cursos')
-        .select('categoria')
-        .eq('id', courseId)
-        .single();
+      // Calcular nota
+      let acertos = 0;
+      const totalPerguntas = quizConfig.perguntas.length;
 
-      if (cursoError) {
-        throw cursoError;
+      quizConfig.perguntas.forEach(pergunta => {
+        const respostaUsuario = respostas[pergunta.id];
+        if (respostaUsuario === pergunta.resposta_correta) {
+          acertos++;
+        }
+      });
+
+      const nota = Math.round((acertos / totalPerguntas) * 100);
+      const aprovado = nota >= quizConfig.nota_minima;
+
+      // Salvar progresso do quiz
+      const { error: progressError } = await supabase
+        .from('progresso_quiz')
+        .upsert({
+          usuario_id: userId,
+          quiz_id: quizConfig.id,
+          respostas: respostas,
+          nota: nota,
+          aprovado: aprovado,
+          data_conclusao: new Date().toISOString()
+        });
+
+      if (progressError) throw progressError;
+
+      // Se aprovado, gerar certificado
+      if (aprovado && courseId) {
+        const { data: certId, error: certError } = await supabase
+          .rpc('gerar_certificado_curso', {
+            p_usuario_id: userId,
+            p_curso_id: courseId,
+            p_quiz_id: quizConfig.id,
+            p_nota: nota
+          });
+
+        if (certError) {
+          console.error('Erro ao gerar certificado:', certError);
+        } else {
+          // Buscar certificado gerado
+          const { data: certData } = await supabase
+            .from('certificados')
+            .select('*')
+            .eq('id', certId)
+            .single();
+
+          setCertificate(certData);
+        }
       }
 
-      if (!cursoData?.categoria) {
-        throw new Error('Categoria do curso não encontrada');
-      }
+      // Atualizar progresso local
+      setUserProgress({
+        usuario_id: userId,
+        quiz_id: quizConfig.id,
+        respostas: respostas,
+        nota: nota,
+        aprovado: aprovado,
+        data_conclusao: new Date().toISOString()
+      });
 
-      // Buscar quiz pela categoria
-      const { data: quiz, error } = await supabase
-        .from('quizzes')
-        .select(`
-          id, 
-          titulo, 
-          descricao,
-          nota_minima,
-          quiz_perguntas(
-            id, 
-            pergunta, 
-            opcoes, 
-            resposta_correta, 
-            explicacao, 
-            ordem
-          )
-        `)
-        .eq('categoria', cursoData.categoria)
-        .eq('ativo', true)
-        .single();
+      return { nota, aprovado };
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      if (quiz) {
-        // Ordenar perguntas por ordem
-        const sortedPerguntas = quiz.quiz_perguntas?.sort((a, b) => a.ordem - b.ordem) || [];
-        return {
-          ...quiz,
-          quiz_perguntas: sortedPerguntas
-        };
-      }
-
-      return null;
     } catch (err) {
-      console.error('Erro ao buscar quiz do curso:', err);
-      setError('Erro ao carregar quiz do curso');
+      console.error('Erro ao submeter quiz:', err);
+      setError('Erro ao submeter respostas do quiz');
       return null;
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }, []);
+  }, [userId, quizConfig, courseId]);
 
-  // Salvar respostas do quiz
-  const saveQuizAnswers = useCallback(async (quizId: string, answers: Record<string, number>, nota: number) => {
-    if (!userId) return null;
-
-    try {
-      const { data, error } = await supabase
-        .from('progresso_quiz')
-        .insert({
-          usuario_id: userId,
-          quiz_id: quizId,
-          respostas: answers,
-          nota: nota,
-          data_conclusao: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (err) {
-      console.error('Erro ao salvar respostas do quiz:', err);
-      throw new Error('Erro ao salvar respostas do quiz');
+  // Verificar disponibilidade periodicamente
+  useEffect(() => {
+    if (userId && courseId) {
+      checkQuizAvailability();
+      
+      // Verificar a cada 30 segundos
+      const interval = setInterval(checkQuizAvailability, 30000);
+      return () => clearInterval(interval);
     }
-  }, [userId]);
-
-  // Carregar dados iniciais
-  useEffect(() => {
-    loadQuizConfig();
-  }, [loadQuizConfig]);
-
-  useEffect(() => {
-    checkCourseCompletion();
-  }, [checkCourseCompletion]);
+  }, [userId, courseId, checkQuizAvailability]);
 
   return {
     quizConfig,
-    loading,
+    isLoading,
     error,
-    isCourseCompleted,
+    isQuizAvailable,
+    userProgress,
     certificate,
-    generateCertificate,
-    checkCourseCompletion,
-    fetchCourseQuiz,
-    saveQuizAnswers
+    submitQuiz,
+    checkQuizAvailability
   };
 } 

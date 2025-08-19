@@ -26,6 +26,8 @@ import { TestComponent } from '@/components/TestComponent';
 import { AuthDebugPanel } from '@/components/AuthDebugPanel';
 import { AITokenManagement } from '@/pages/AITokenManagement';
 import { CadastroTest } from '@/components/CadastroTest';
+import ResetPassword from '@/pages/ResetPassword';
+import { ImageDiagnostic } from '@/components/ImageDiagnostic';
 // import AIModulePage from '@/pages/admin/ai';
 
 const queryClient = new QueryClient();
@@ -43,7 +45,9 @@ const App = () => (
                 <Routes>
                 <Route path="/test" element={<TestComponent />} />
                 <Route path="/cadastro-test" element={<CadastroTest />} />
+                <Route path="/image-diagnostic" element={<ImageDiagnostic />} />
                 <Route path="/" element={<Index />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route 
                   path="/dashboard" 
                   element={

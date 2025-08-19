@@ -76,3 +76,6 @@ SELECT '✅ Agora execute solucao-ultra-simples-final.sql' as proximo_passo;
 
 
 
+
+
+

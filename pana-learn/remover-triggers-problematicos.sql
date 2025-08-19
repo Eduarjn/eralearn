@@ -87,3 +87,6 @@ SELECT '✅ Agora execute sistema-quiz-admin-simples.sql' as proximo_passo;
 
 
 
+
+
+

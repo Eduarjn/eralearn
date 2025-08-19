@@ -60,8 +60,9 @@ export function Sidebar({ children }: SidebarProps) {
       <main 
         className="flex-1 transition-[margin-left] duration-200 ease-in-out overflow-hidden"
         style={{ 
-          marginLeft: `${sidebarWidth}px`,
-          paddingTop: '0px' // Remove top padding on desktop
+          // Reduz o espaçamento entre a sidebar e o conteúdo para ~5% do tamanho atual
+          marginLeft: `${Math.max(4, Math.floor(sidebarWidth * 0.05))}px`,
+          paddingTop: '0px'
         }}
       >
         {/* Mobile content padding */}

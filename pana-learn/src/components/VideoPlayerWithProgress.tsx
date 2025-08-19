@@ -48,6 +48,13 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
   const { toast } = useToast();
   const { progress, saveProgress, markAsCompleted } = useVideoProgress(userId, video.id, cursoId, moduloId);
 
+  // Extrair ID do vídeo do YouTube
+  const extractYouTubeVideoId = (url: string): string => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : '';
+  };
+
   // Detectar se é vídeo do YouTube
   const isYouTube = video.url_video.includes('youtube.com') || video.url_video.includes('youtu.be');
   const youtubeVideoId = isYouTube ? extractYouTubeVideoId(video.url_video) : '';
@@ -59,13 +66,6 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
         setDuration(video.duracao);
       }
     }
-  };
-
-  // Extrair ID do vídeo do YouTube
-  const extractYouTubeVideoId = (url: string): string => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : '';
   };
 
   // Carregar metadados do vídeo

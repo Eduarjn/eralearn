@@ -69,6 +69,8 @@ const Usuarios = () => {
     userName: string;
     progress: Database['public']['Tables']['progresso_usuario']['Row'][];
   } | null>(null);
+  const [sortField, setSortField] = useState<'nome' | 'email' | 'ultimo_login' | 'tipo_usuario' | 'data_criacao'>('data_criacao');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Detectar se é mobile
   useEffect(() => {
@@ -89,7 +91,7 @@ const Usuarios = () => {
       const { data: usersData, count, error } = await supabase
         .from('usuarios')
         .select('*', { count: 'exact' })
-        .order('data_criacao', { ascending: false });
+        .order(sortField, { ascending: sortDirection === 'asc' });
 
       if (error) {
         console.error('Erro ao buscar usuários:', error);
@@ -157,10 +159,41 @@ const Usuarios = () => {
         clearTimeout(debounceRef.current);
       }
     };
-  }, [searchTerm]);
+  }, [searchTerm, sortField, sortDirection]);
 
   const handleSearch = () => {
     fetchUsers();
+  };
+
+  const handleSort = (field: 'nome' | 'email' | 'ultimo_login' | 'tipo_usuario' | 'data_criacao') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const formatLastLogin = (lastLogin: string | null | undefined) => {
+    if (!lastLogin) return 'Nunca';
+    
+    const date = new Date(lastLogin);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) {
+      return 'Agora mesmo';
+    } else if (diffInHours < 24) {
+      return `${diffInHours}h atrás`;
+    } else if (diffInHours < 168) { // 7 dias
+      const days = Math.floor(diffInHours / 24);
+      return `${days} dia${days > 1 ? 's' : ''} atrás`;
+    } else {
+      return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    }
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -281,6 +314,7 @@ const Usuarios = () => {
     }
 
     try {
+      // ✅ CORREÇÃO: Usar estrutura correta da tabela usuarios
       const { error } = await supabase
         .from('usuarios')
         .insert({
@@ -288,9 +322,19 @@ const Usuarios = () => {
           email: newUser.email,
           tipo_usuario: newUser.tipo === 'Cliente' ? 'cliente' : 'admin' as Database['public']['Enums']['user_type'],
           status: newUser.status === 'Ativo' ? 'ativo' : 'inativo' as Database['public']['Enums']['status_type']
+          // ✅ NOTA: user_id será NULL para usuários criados manualmente por admin
+          // Isso é aceitável para usuários que não fazem login via Supabase Auth
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao criar usuário:', error);
+        if (error.code === '23505') { // unique_violation
+          toast({ title: 'Erro ao criar usuário', description: 'Email já existe no sistema', variant: 'destructive' });
+        } else {
+          throw error;
+        }
+        return;
+      }
 
       toast({ title: 'Usuário criado com sucesso!' });
       setNewUser({ nome: '', email: '', tipo: 'Cliente', status: 'Ativo' });
@@ -664,11 +708,71 @@ const Usuarios = () => {
                             onCheckedChange={handleSelectAll}
                           />
                         </TableHead>
-                        <TableHead className="font-medium text-era-black">Nome</TableHead>
-                        <TableHead className="font-medium text-era-black">Email</TableHead>
-                        <TableHead className="font-medium text-era-black">Último Login</TableHead>
-                        <TableHead className="font-medium text-era-black">Tipo</TableHead>
-                        <TableHead className="font-medium text-era-black">Data Criação</TableHead>
+                        <TableHead 
+                          className="font-medium text-era-black cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleSort('nome')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Nome
+                            {sortField === 'nome' && (
+                              <span className="text-era-green">
+                                {sortDirection === 'asc' ? '↑' : '↓'}
+                              </span>
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="font-medium text-era-black cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleSort('email')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Email
+                            {sortField === 'email' && (
+                              <span className="text-era-green">
+                                {sortDirection === 'asc' ? '↑' : '↓'}
+                              </span>
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="font-medium text-era-black cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleSort('ultimo_login')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Último Login
+                            {sortField === 'ultimo_login' && (
+                              <span className="text-era-green">
+                                {sortDirection === 'asc' ? '↑' : '↓'}
+                              </span>
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="font-medium text-era-black cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleSort('tipo_usuario')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Tipo
+                            {sortField === 'tipo_usuario' && (
+                              <span className="text-era-green">
+                                {sortDirection === 'asc' ? '↑' : '↓'}
+                              </span>
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="font-medium text-era-black cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleSort('data_criacao')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Data Criação
+                            {sortField === 'data_criacao' && (
+                              <span className="text-era-green">
+                                {sortDirection === 'asc' ? '↑' : '↓'}
+                              </span>
+                            )}
+                          </div>
+                        </TableHead>
                         <TableHead className="font-medium text-era-black">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -704,10 +808,12 @@ const Usuarios = () => {
                             <TableCell className="font-medium text-era-black">{user.nome}</TableCell>
                             <TableCell className="text-era-gray-medium">{user.email}</TableCell>
                             <TableCell className="text-era-gray-medium">
-                              {user.ultimo_login 
-                                ? new Date(user.ultimo_login).toLocaleDateString('pt-BR') + ' ' + new Date(user.ultimo_login).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-                                : 'Nunca'
-                              }
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3 text-era-gray-medium" />
+                                <span className={user.ultimo_login ? 'text-era-black' : 'text-era-gray-medium'}>
+                                  {formatLastLogin(user.ultimo_login)}
+                                </span>
+                              </div>
                             </TableCell>
                             <TableCell>
                               <span className={`px-2 py-1 rounded-full text-xs ${

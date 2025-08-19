@@ -34,8 +34,10 @@ export function AuthForm() {
         console.log('✅ Imagem de fundo carregada com sucesso');
         setBackgroundLoaded(true);
       };
-      img.onerror = () => {
-        console.error('❌ Erro ao carregar imagem de fundo, usando fallback');
+      img.onerror = (e) => {
+        console.error('❌ Erro ao carregar imagem de fundo, usando fallback', e);
+        console.error('URL da imagem:', '/lovable-uploads/aafcc16a-d43c-4f66-9fa4-70da46d38ccb.png');
+        console.error('Ambiente:', window.location.hostname);
         setBackgroundLoaded(false);
       };
       img.src = '/lovable-uploads/aafcc16a-d43c-4f66-9fa4-70da46d38ccb.png';

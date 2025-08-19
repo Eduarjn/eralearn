@@ -641,7 +641,6 @@ const CursoDetalhe = () => {
               {selectedVideo && (
                 <CommentsSection
                   videoId={selectedVideo.id}
-                  currentUser={{...userProfile, role: userProfile?.tipo_usuario || 'cliente'}}
                 />
               )}
             </div>

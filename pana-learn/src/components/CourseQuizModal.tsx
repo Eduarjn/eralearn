@@ -2,12 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuiz } from '@/hooks/useQuiz';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle, XCircle, ArrowLeft, ArrowRight, Award } from 'lucide-react';
+import { CheckCircle, XCircle, ArrowLeft, ArrowRight, Award, BookOpen } from 'lucide-react';
 
 interface CourseQuizModalProps {
   courseId: string;
@@ -17,203 +16,297 @@ interface CourseQuizModalProps {
   onQuizComplete: (passed: boolean, score: number) => void;
 }
 
-export function CourseQuizModal({
-  courseId,
-  courseName,
-  isOpen,
-  onClose,
-  onQuizComplete
+export function CourseQuizModal({ 
+  courseId, 
+  courseName, 
+  isOpen, 
+  onClose, 
+  onQuizComplete 
 }: CourseQuizModalProps) {
-  const { userProfile } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [score, setScore] = useState(0);
-  const [quizCompleted, setQuizCompleted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [courseCategory, setCourseCategory] = useState<string | undefined>(undefined);
+  const { 
+    quizConfig, 
+    isLoading, 
+    error, 
+    isQuizAvailable, 
+    userProgress, 
+    certificate, 
+    submitQuiz,
+    checkQuizAvailability 
+  } = useQuiz(user?.id, courseId);
 
-  // Buscar a categoria do curso
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [quizResult, setQuizResult] = useState<{ nota: number; aprovado: boolean } | null>(null);
+
+  // Verificar disponibilidade quando modal abre
   useEffect(() => {
-    const fetchCourseCategory = async () => {
-      if (!courseId) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('cursos')
-          .select('categoria')
-          .eq('id', courseId)
-          .single();
+    if (isOpen && user?.id && courseId) {
+      checkQuizAvailability();
+    }
+  }, [isOpen, user?.id, courseId, checkQuizAvailability]);
 
-        if (error) {
-          console.error('Erro ao buscar categoria do curso:', error);
-          return;
-        }
+  // Resetar estado quando modal fecha
+  useEffect(() => {
+    if (!isOpen) {
+      setCurrentQuestionIndex(0);
+      setAnswers({});
+      setShowResults(false);
+      setQuizResult(null);
+    }
+  }, [isOpen]);
 
-        setCourseCategory(data?.categoria);
-      } catch (error) {
-        console.error('Erro ao buscar categoria do curso:', error);
-      }
-    };
+  // Se usuário já completou o quiz, mostrar resultados
+  useEffect(() => {
+    if (userProgress && !showResults) {
+      setShowResults(true);
+      setQuizResult({
+        nota: userProgress.nota,
+        aprovado: userProgress.aprovado
+      });
+    }
+  }, [userProgress, showResults]);
 
-    fetchCourseCategory();
-  }, [courseId]);
-
-  const {
-    quizConfig,
-    loading: questionsLoading,
-    error: questionsError,
-    generateCertificate
-  } = useQuiz(userProfile?.id, courseCategory);
-
-  const totalQuestions = quizConfig?.perguntas?.length || 0;
-  const answeredQuestions = Object.keys(answers).length;
-  const progressPercentage = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
-
-  const currentQuestionData = quizConfig?.perguntas?.[currentQuestion];
-
-  const handleAnswerSelect = (answer: string) => {
+  const handleAnswerSelect = (questionId: string, answerIndex: number) => {
     setAnswers(prev => ({
       ...prev,
-      [currentQuestion]: answer
+      [questionId]: answerIndex
     }));
   };
 
   const handleNextQuestion = () => {
-    if (currentQuestion < totalQuestions - 1) {
-      setCurrentQuestion(prev => prev + 1);
+    if (currentQuestionIndex < (quizConfig?.perguntas.length || 0) - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
     }
   };
 
   const handlePreviousQuestion = () => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion(prev => prev - 1);
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
     }
   };
 
-  const handleFinishQuiz = async () => {
-    if (answeredQuestions < totalQuestions) {
-      toast({
-        title: "Atenção",
-        description: "Você precisa responder todas as perguntas para finalizar o quiz.",
-        variant: "destructive"
-      });
-      return;
-    }
+  const handleSubmitQuiz = async () => {
+    if (!quizConfig) return;
 
-    setLoading(true);
-
+    setIsSubmitting(true);
     try {
-      // Calcular nota
-      let acertos = 0;
-      const totalPerguntas = quizConfig?.perguntas?.length || 0;
-      
-      quizConfig?.perguntas?.forEach((pergunta, index) => {
-        const respostaSelecionada = answers[index];
-        if (respostaSelecionada === pergunta.opcoes[pergunta.resposta_correta]) {
-          acertos++;
-        }
-      });
-
-      const score = totalPerguntas > 0 ? Math.round((acertos / totalPerguntas) * 100) : 0;
-      const passed = score >= (quizConfig?.nota_minima || 70);
-
-      setScore(score);
-      setQuizCompleted(true);
-
-      if (passed) {
-        // Gerar certificado
-        const certificateResult = await generateCertificate(score);
+      const result = await submitQuiz(answers);
+      if (result) {
+        setQuizResult(result);
+        setShowResults(true);
+        onQuizComplete(result.aprovado, result.nota);
         
-        if (certificateResult?.error) {
-          console.error('Erro ao gerar certificado:', certificateResult.error);
-        }
-
         toast({
-          title: "Parabéns! 🎉",
-          description: `Você foi aprovado com ${score}%! Seu certificado foi gerado.`,
-          variant: "default"
-        });
-      } else {
-        toast({
-          title: "Continue estudando",
-          description: `Sua nota foi ${score}%. Tente novamente!`,
-          variant: "destructive"
+          title: result.aprovado ? "Parabéns!" : "Continue estudando",
+          description: result.aprovado 
+            ? "Você foi aprovado no quiz e recebeu seu certificado!" 
+            : "Você precisa de pelo menos 70% para ser aprovado.",
+          variant: result.aprovado ? "default" : "destructive"
         });
       }
-
-      onQuizComplete(passed, score);
-    } catch (error) {
-      console.error('Erro ao finalizar quiz:', error);
+    } catch (err) {
+      console.error('Erro ao submeter quiz:', err);
       toast({
         title: "Erro",
-        description: "Ocorreu um erro ao finalizar o quiz. Tente novamente.",
+        description: "Erro ao submeter respostas do quiz. Tente novamente.",
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleClose = () => {
-    if (!quizCompleted) {
-      const hasAnsweredQuestions = Object.keys(answers).length > 0;
-      
-      if (hasAnsweredQuestions) {
-        if (confirm('Tem certeza que deseja sair? Seu progresso será perdido.')) {
-          onClose();
-        }
-      } else {
-        onClose();
-      }
-    } else {
-      onClose();
-    }
-  };
+  const currentQuestion = quizConfig?.perguntas[currentQuestionIndex];
+  const totalQuestions = quizConfig?.perguntas.length || 0;
+  const progress = totalQuestions > 0 ? ((currentQuestionIndex + 1) / totalQuestions) * 100 : 0;
+  const allQuestionsAnswered = totalQuestions > 0 && 
+    Object.keys(answers).length === totalQuestions;
 
-  const resetQuiz = () => {
-    setCurrentQuestion(0);
-    setAnswers({});
-    setScore(0);
-    setQuizCompleted(false);
-  };
-
-  // Se não há categoria ou está carregando, mostrar loading
-  if (!courseCategory || questionsLoading) {
+  // Se quiz não está disponível
+  if (!isQuizAvailable && !isLoading && !error) {
     return (
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-2xl">
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Carregando Quiz...</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              Quiz não disponível
+            </DialogTitle>
           </DialogHeader>
-          <div className="flex items-center justify-center py-8">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-era-green mx-auto mb-4"></div>
-              <p className="text-gray-600">Carregando perguntas do quiz...</p>
-            </div>
+          <div className="text-center py-6">
+            <p className="text-muted-foreground mb-4">
+              Para acessar o quiz, você precisa concluir todos os vídeos do curso primeiro.
+            </p>
+            <Button onClick={onClose}>
+              Entendi
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
     );
   }
 
-  // Se há erro, mostrar mensagem
-  if (questionsError) {
+  // Se já tem certificado
+  if (certificate) {
     return (
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-2xl">
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Erro ao Carregar Quiz</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Award className="h-5 w-5 text-green-600" />
+              Certificado já emitido
+            </DialogTitle>
           </DialogHeader>
-          <div className="text-center py-8">
-            <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <p className="text-gray-600 mb-4">
+          <div className="text-center py-6">
+            <div className="mb-4">
+              <Award className="h-12 w-12 text-green-600 mx-auto mb-2" />
+              <p className="font-semibold">Parabéns!</p>
+              <p className="text-sm text-muted-foreground">
+                Você já concluiu este curso e possui um certificado.
+              </p>
+            </div>
+            <div className="bg-green-50 p-3 rounded-lg mb-4">
+              <p className="text-sm">
+                <strong>Nota:</strong> {certificate.nota}%
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Concluído em: {new Date(certificate.data_conclusao).toLocaleDateString()}
+              </p>
+            </div>
+            <Button onClick={onClose}>
+              Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Se já completou o quiz mas não foi aprovado
+  if (userProgress && !userProgress.aprovado) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-red-600" />
+              Quiz não aprovado
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-6">
+            <div className="mb-4">
+              <XCircle className="h-12 w-12 text-red-600 mx-auto mb-2" />
+              <p className="font-semibold">Continue estudando</p>
+              <p className="text-sm text-muted-foreground">
+                Sua nota: {userProgress.nota}% (mínimo: 70%)
+              </p>
+            </div>
+            <Button onClick={onClose}>
+              Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Loading
+  if (isLoading) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Carregando quiz...</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-6">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Erro
+  if (error) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Erro</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-6">
+            <p className="text-red-600 mb-4">{error}</p>
+            <Button onClick={onClose}>
+              Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Mostrar resultados
+  if (showResults && quizResult) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {quizResult.aprovado ? (
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-600" />
+              )}
+              {quizResult.aprovado ? "Quiz Aprovado!" : "Quiz não aprovado"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-6">
+            <div className="mb-4">
+              {quizResult.aprovado ? (
+                <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-2" />
+              ) : (
+                <XCircle className="h-12 w-12 text-red-600 mx-auto mb-2" />
+              )}
+              <p className="font-semibold">
+                {quizResult.aprovado ? "Parabéns!" : "Continue estudando"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Sua nota: {quizResult.nota}%
+              </p>
+            </div>
+            {quizResult.aprovado && (
+              <div className="bg-green-50 p-3 rounded-lg mb-4">
+                <p className="text-sm">
+                  Seu certificado foi gerado automaticamente!
+                </p>
+              </div>
+            )}
+            <Button onClick={onClose}>
+              Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Quiz não encontrado
+  if (!quizConfig) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Quiz não encontrado</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-6">
+            <p className="text-muted-foreground mb-4">
               Não foi possível carregar o quiz para este curso.
             </p>
-            <p className="text-sm text-gray-500">
-              Verifique se existe um quiz configurado para a categoria "{courseCategory}".
-            </p>
-            <Button onClick={handleClose} className="mt-4">
+            <Button onClick={onClose}>
               Fechar
             </Button>
           </div>
@@ -222,152 +315,87 @@ export function CourseQuizModal({
     );
   }
 
-  // Se não há quiz configurado
-  if (!quizConfig || !quizConfig.perguntas || quizConfig.perguntas.length === 0) {
-    return (
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Quiz Não Disponível</DialogTitle>
-          </DialogHeader>
-          <div className="text-center py-8">
-            <Award className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 mb-4">
-              Não há quiz configurado para este curso.
-            </p>
-            <p className="text-sm text-gray-500">
-              Categoria: {courseCategory}
-            </p>
-            <Button onClick={handleClose} className="mt-4">
-              Fechar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
+  // Interface do quiz
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Award className="h-5 w-5 text-era-green" />
-            Quiz: {courseName}
-          </DialogTitle>
+          <DialogTitle>{quizConfig.titulo}</DialogTitle>
+          {quizConfig.descricao && (
+            <p className="text-sm text-muted-foreground">{quizConfig.descricao}</p>
+          )}
         </DialogHeader>
 
-        {!quizCompleted ? (
-          <div className="space-y-6">
-            {/* Progresso */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Progresso</span>
-                <span>{answeredQuestions}/{totalQuestions} perguntas respondidas</span>
-              </div>
-              <Progress value={progressPercentage} className="h-2" />
+        <div className="space-y-6">
+          {/* Progresso */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Questão {currentQuestionIndex + 1} de {totalQuestions}</span>
+              <span>{Math.round(progress)}%</span>
             </div>
+            <Progress value={progress} className="h-2" />
+          </div>
 
-            {/* Pergunta atual */}
+          {/* Questão atual */}
+          {currentQuestion && (
             <Card>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">
-                      Pergunta {currentQuestion + 1} de {totalQuestions}
-                    </span>
-                    {answers[currentQuestion] && (
-                      <CheckCircle className="h-5 w-5 text-era-green" />
-                    )}
-                  </div>
-                  
-                  <h3 className="text-lg font-semibold">
-                    {currentQuestionData?.pergunta}
-                  </h3>
-
-                  <div className="space-y-3">
-                    {currentQuestionData?.opcoes.map((opcao, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleAnswerSelect(opcao)}
-                        className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
-                          answers[currentQuestion] === opcao
-                            ? 'border-era-green bg-era-green/10'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        {opcao}
-                      </button>
-                    ))}
-                  </div>
+              <CardContent className="pt-6">
+                <h3 className="font-semibold mb-4">{currentQuestion.pergunta}</h3>
+                
+                <div className="space-y-3">
+                  {currentQuestion.opcoes.map((opcao, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleAnswerSelect(currentQuestion.id, index)}
+                      className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                        answers[currentQuestion.id] === index
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      {opcao}
+                    </button>
+                  ))}
                 </div>
               </CardContent>
             </Card>
+          )}
 
-            {/* Navegação */}
-            <DialogFooter className="flex justify-between">
+          {/* Navegação */}
+          <div className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={handlePreviousQuestion}
+              disabled={currentQuestionIndex === 0}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Anterior
+            </Button>
+
+            {currentQuestionIndex === totalQuestions - 1 ? (
               <Button
-                variant="outline"
-                onClick={handlePreviousQuestion}
-                disabled={currentQuestion === 0}
+                onClick={handleSubmitQuiz}
+                disabled={!allQuestionsAnswered || isSubmitting}
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Anterior
+                {isSubmitting ? "Enviando..." : "Enviar Quiz"}
               </Button>
-
-              <div className="flex gap-2">
-                {currentQuestion < totalQuestions - 1 ? (
-                  <Button
-                    onClick={handleNextQuestion}
-                    disabled={!answers[currentQuestion]}
-                  >
-                    Próxima
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleFinishQuiz}
-                    disabled={answeredQuestions < totalQuestions || loading}
-                    className="bg-era-green hover:bg-era-green/90 text-era-black"
-                  >
-                    {loading ? 'Finalizando...' : 'Finalizar Quiz'}
-                  </Button>
-                )}
-              </div>
-            </DialogFooter>
+            ) : (
+              <Button
+                onClick={handleNextQuestion}
+                disabled={!answers[currentQuestion?.id]}
+              >
+                Próxima
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            )}
           </div>
-        ) : (
-          <div className="text-center space-y-6">
-            <div className="flex justify-center">
-              {score >= (quizConfig?.nota_minima || 70) ? (
-                <CheckCircle className="h-16 w-16 text-era-green" />
-              ) : (
-                <XCircle className="h-16 w-16 text-red-500" />
-              )}
-            </div>
+        </div>
 
-            <div>
-              <h3 className="text-2xl font-bold mb-2">
-                {score >= (quizConfig?.nota_minima || 70) ? 'Parabéns!' : 'Continue Estudando'}
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Sua nota foi: <span className="font-bold text-lg">{score}%</span>
-              </p>
-              <p className="text-sm text-gray-500">
-                Nota mínima para aprovação: {quizConfig?.nota_minima || 70}%
-              </p>
-            </div>
-
-            <div className="flex gap-2 justify-center">
-              <Button onClick={resetQuiz} variant="outline">
-                Tentar Novamente
-              </Button>
-              <Button onClick={handleClose}>
-                Fechar
-              </Button>
-            </div>
-          </div>
-        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
