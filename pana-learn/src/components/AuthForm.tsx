@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Eye, EyeOff, GraduationCap } from 'lucide-react';
+import { Loader2, Eye, EyeOff, GraduationCap, Mail } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export function AuthForm() {
   const { signIn, signUp } = useAuth();
@@ -18,9 +19,12 @@ export function AuthForm() {
   const [error, setError] = useState<string>('');
   const [message, setMessage] = useState<string>('');
   const [showPassword, setShowPassword] = useState(false);
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'forgot'>('login');
   const [tipoUsuario, setTipoUsuario] = useState<'admin' | 'cliente'>('cliente');
   const [senhaValidacao, setSenhaValidacao] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetMessage, setResetMessage] = useState('');
+  const [resetError, setResetError] = useState('');
   const SENHA_ADMIN = 'superadmin123';
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -46,6 +50,38 @@ export function AuthForm() {
     } catch (err) {
       console.error('❌ Erro inesperado no login:', err);
       setError('Erro inesperado no sistema');
+    }
+    
+    setLoading(false);
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setResetError('');
+    setResetMessage('');
+    
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('reset-email') as string;
+
+    console.log('📧 Iniciando recuperação de senha:', { email });
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) {
+        setResetError(error.message || 'Erro ao enviar email de recuperação');
+        console.error('❌ Erro na recuperação de senha:', error);
+      } else {
+        setResetMessage('Email de recuperação enviado! Verifique sua caixa de entrada.');
+        console.log('✅ Email de recuperação enviado com sucesso');
+        setResetEmail('');
+      }
+    } catch (err) {
+      console.error('❌ Erro inesperado na recuperação:', err);
+      setResetError('Erro inesperado no sistema');
     }
     
     setLoading(false);
@@ -247,6 +283,78 @@ export function AuthForm() {
                   'Entrar'
                 )}
               </Button>
+              
+              {/* Link para recuperação de senha */}
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('forgot')}
+                  className="text-white/70 hover:text-white text-sm underline transition-colors duration-200"
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Formulário de Recuperação de Senha */}
+          {activeTab === 'forgot' && (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="text-center mb-4">
+                <Mail className="h-12 w-12 text-white/60 mx-auto mb-2" />
+                <h3 className="text-lg font-semibold text-white">Recuperar Senha</h3>
+                <p className="text-white/60 text-sm">Digite seu email para receber instruções de recuperação</p>
+              </div>
+              
+              <div>
+                <Input
+                  name="reset-email"
+                  type="email"
+                  required
+                  value={resetEmail}
+                  onChange={e => setResetEmail(e.target.value)}
+                  className="w-full bg-white/10 border-white/20 text-white placeholder-white/60 rounded-lg px-4 py-3 focus:bg-white/15 focus:border-white/40 transition-all duration-200"
+                  placeholder="seu@email.com"
+                  disabled={loading}
+                />
+              </div>
+              
+              <Button 
+                type="submit" 
+                className="w-full bg-gradient-to-r from-era-black via-era-gray-medium to-era-green hover:from-era-black/90 hover:via-era-gray-medium/90 hover:to-era-green/90 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl" 
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  'Enviar link de recuperação'
+                )}
+              </Button>
+
+              {resetMessage && (
+                <div className="p-3 bg-green-500/20 border border-green-400/30 rounded-lg">
+                  <p className="text-green-200 text-sm font-medium">{resetMessage}</p>
+                </div>
+              )}
+
+              {resetError && (
+                <div className="p-3 bg-red-500/20 border border-red-400/30 rounded-lg">
+                  <p className="text-red-200 text-sm font-medium">{resetError}</p>
+                </div>
+              )}
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('login')}
+                  className="text-white/70 hover:text-white text-sm underline transition-colors duration-200"
+                >
+                  Voltar para login
+                </button>
+              </div>
             </form>
           )}
 
@@ -328,7 +436,9 @@ export function AuthForm() {
           <p className="text-white/60 text-xs">
             {activeTab === 'login' 
               ? 'Não tem uma conta? Clique em "Cadastrar" acima'
-              : 'Já tem uma conta? Clique em "Entrar" acima'
+              : activeTab === 'register'
+              ? 'Já tem uma conta? Clique em "Entrar" acima'
+              : 'Lembrou sua senha? Volte para o login'
             }
           </p>
         </div>

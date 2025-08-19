@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const { data: profile, error } = await supabase
                 .from('usuarios')
                 .select('*')
-                .eq('id', session.user.id)
+                .eq('user_id', session.user.id)
                 .single();
               if (error) {
                 const testUser = testUsers.find(u => u.email === session.user.email);
@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const { data: profile, error: profileError } = await supabase
                 .from('usuarios')
                 .select('*')
-                .eq('id', session.user.id)
+                .eq('user_id', session.user.id)
                 .single();
               
               if (!profileError && profile) {
@@ -263,6 +263,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: { message: 'Senha deve ter pelo menos 6 caracteres' } };
       }
       const redirectUrl = `${window.location.origin}/`;
+      
       // Criar usuário no Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -275,6 +276,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       });
+      
       if (error) {
         let errorMessage = 'Erro ao criar conta';
         if (error.message?.includes('already registered')) {
@@ -286,28 +288,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         return { error: { message: errorMessage } };
       }
-      // Inserir dados extras na tabela usuarios usando o id do Auth
-      if (data.user && !error) {
-        try {
-          const { error: insertError } = await supabase
-            .from('usuarios')
-            .insert({
-              id: data.user.id,
-              email: email,
-              nome: nome.trim(),
-              tipo_usuario,
-              status: 'ativo'
-            });
-          if (insertError) {
-            console.error('Erro ao inserir usuário:', insertError);
-            return { error: { message: 'Erro ao criar perfil do usuário: ' + insertError.message } };
-          }
-        } catch (e) {
-          console.error('Erro inesperado ao inserir usuário:', e);
-          return { error: { message: 'Erro interno ao criar usuário' } };
-        }
-      }
+      
+      // ✅ CORREÇÃO: Remover inserção manual redundante
+      // O trigger handle_new_user deve criar automaticamente o registro na tabela usuarios
+      // Se o trigger falhar, o erro será capturado pelo próprio Supabase Auth
+      
+      console.log('✅ Usuário criado no Auth, aguardando trigger handle_new_user...');
       return { error: null };
+      
     } catch (error) {
       console.error('Erro no signUp:', error);
       return { error: { message: 'Erro interno no sistema' } };

@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Rápido - Cadastro de Usuários</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste Rápido - Cadastro de Usuários</h1>
+        
+        <div id="status" class="status disconnected">
+            🔴 Verificando conexão...
+        </div>
+        
+        <form id="cadastroForm">
+            <div class="form-group">
+                <label for="nome">Nome Completo:</label>
+                <input type="text" id="nome" name="nome" required placeholder="Digite seu nome completo">
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required placeholder="seu@email.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Senha:</label>
+                <input type="password" id="password" name="password" required placeholder="Mínimo 6 caracteres">
+            </div>
+            
+            <div class="form-group">
+                <label for="tipo_usuario">Tipo de Usuário:</label>
+                <select id="tipo_usuario" name="tipo_usuario" required>
+                    <option value="cliente">Cliente</option>
+                    <option value="admin">Administrador</option>
+                </select>
+            </div>
+            
+            <button type="submit">🚀 Testar Cadastro</button>
+        </form>
+        
+        <div id="result"></div>
+        
+        <div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+            <h3>📋 Instruções:</h3>
+            <ol>
+                <li>Preencha os dados acima</li>
+                <li>Clique em "Testar Cadastro"</li>
+                <li>Verifique o resultado na área abaixo</li>
+                <li>Se der erro 406, execute o script SQL primeiro</li>
+            </ol>
+            
+            <h3>🔧 Script SQL Necessário:</h3>
+            <p>Execute o arquivo <code>diagnose-cadastro-usuarios-406.sql</code> no SQL Editor do Supabase antes de testar.</p>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Supabase
+        const SUPABASE_URL = 'https://oqoxhavdhrgdjvxvajze.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Função para testar conexão
+        async function testConnection() {
+            const statusDiv = document.getElementById('status');
+            
+            try {
+                // Testar conexão básica
+                const { data, error } = await supabase
+                    .from('usuarios')
+                    .select('count')
+                    .limit(1);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                statusDiv.textContent = '🟢 Conectado ao Supabase';
+                statusDiv.className = 'status connected';
+                console.log('✅ Conexão estabelecida com sucesso');
+                
+            } catch (error) {
+                statusDiv.textContent = '🔴 Erro de conexão: ' + error.message;
+                statusDiv.className = 'status disconnected';
+                console.error('❌ Erro de conexão:', error);
+            }
+        }
+        
+        // Função para cadastrar usuário
+        async function cadastrarUsuario(formData) {
+            const nome = formData.get('nome');
+            const email = formData.get('email');
+            const password = formData.get('password');
+            const tipo_usuario = formData.get('tipo_usuario');
+            
+            console.log('📝 Iniciando teste de cadastro:', { nome, email, tipo_usuario });
+            
+            try {
+                // 1. Criar usuário no Supabase Auth
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        emailRedirectTo: window.location.origin,
+                        data: {
+                            nome: nome,
+                            tipo_usuario: tipo_usuario
+                        }
+                    }
+                });
+                
+                if (error) {
+                    throw error;
+                }
+                
+                console.log('✅ Usuário criado no Auth:', data);
+                
+                // 2. Verificar se o usuário foi criado na tabela usuarios
+                if (data.user) {
+                    // Aguardar um pouco para o trigger executar
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    const { data: profile, error: profileError } = await supabase
+                        .from('usuarios')
+                        .select('*')
+                        .eq('id', data.user.id)
+                        .single();
+                    
+                    if (profileError) {
+                        console.log('⚠️ Erro ao buscar perfil:', profileError);
+                        return { 
+                            success: true, 
+                            data: data, 
+                            warning: 'Usuário criado no Auth, mas não encontrado na tabela usuarios. Verifique o trigger.' 
+                        };
+                    } else {
+                        console.log('✅ Perfil encontrado na tabela usuarios:', profile);
+                        return { success: true, data: data, profile: profile };
+                    }
+                }
+                
+                return { success: true, data: data };
+                
+            } catch (error) {
+                console.error('❌ Erro no cadastro:', error);
+                return { success: false, error: error };
+            }
+        }
+        
+        // Event listener do formulário
+        document.getElementById('cadastroForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '<div class="info">🔄 Processando teste de cadastro...</div>';
+            
+            const result = await cadastrarUsuario(formData);
+            
+            if (result.success) {
+                let message = `
+✅ TESTE DE CADASTRO BEM-SUCEDIDO!
+
+📋 Dados do Usuário:
+• Nome: ${formData.get('nome')}
+• Email: ${formData.get('email')}
+• Tipo: ${formData.get('tipo_usuario')}
+• ID do Usuário: ${result.data.user?.id || 'N/A'}
+
+🎉 O cadastro está funcionando corretamente!
+O erro 406 foi resolvido.
+                `;
+                
+                if (result.profile) {
+                    message += `
+📊 Perfil na Tabela usuarios:
+• ID: ${result.profile.id}
+• Status: ${result.profile.status}
+• Data de Criação: ${new Date(result.profile.data_criacao).toLocaleString('pt-BR')}
+                    `;
+                }
+                
+                if (result.warning) {
+                    message += `
+⚠️ AVISO: ${result.warning}
+                `;
+                }
+                
+                resultDiv.innerHTML = `<div class="success">${message}</div>`;
+                
+                // Limpar formulário
+                e.target.reset();
+                
+            } else {
+                let errorMessage = `
+❌ ERRO NO TESTE DE CADASTRO
+
+🔍 Detalhes do Erro:
+• Mensagem: ${result.error.message}
+• Código: ${result.error.status || 'N/A'}
+• Status: ${result.error.status || 'N/A'}
+
+💡 Possíveis Soluções:
+• Execute o script SQL diagnose-cadastro-usuarios-406.sql
+• Verifique as configurações de autenticação no Supabase
+• Confirme que a tabela usuarios existe
+                `;
+                
+                // Se for erro 406, adicionar instrução específica
+                if (result.error.status === 406) {
+                    errorMessage += `
+🚨 ERRO 406 DETECTADO!
+Execute imediatamente o script SQL para resolver este problema.
+                `;
+                }
+                
+                resultDiv.innerHTML = `<div class="error">${errorMessage}</div>`;
+            }
+        });
+        
+        // Testar conexão ao carregar a página
+        testConnection();
+    </script>
+</body>
+</html>
