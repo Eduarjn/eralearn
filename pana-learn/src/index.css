@@ -471,3 +471,60 @@
     display: none !important;
   }
 }
+
+/* Fundo visual customizado para tela de login ERA Learn */
+.era-login-bg {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at 60% 40%, #2A2A2A 60%, #39394a 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Fallback para imagem de fundo do login */
+.login-background {
+  background-image: url('/lovable-uploads/aafcc16a-d43c-4f66-9fa4-70da46d38ccb.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* Fallback gradiente se a imagem não carregar */
+.login-background-fallback {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* Detectar se a imagem carregou */
+.login-background:not(.image-loaded) {
+  background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.era-login-bg::before, .era-login-bg::after {
+  content: '';
+  position: absolute;
+  border-radius: 16px;
+  opacity: 0.18;
+  pointer-events: none;
+}
+.era-login-bg::before {
+  width: 220px;
+  height: 220px;
+  left: 5vw;
+  top: 10vh;
+  background: #fff;
+  opacity: 0.06;
+  box-shadow: 0 8px 32px 0 #0002;
+}
+.era-login-bg::after {
+  width: 180px;
+  height: 180px;
+  right: 8vw;
+  bottom: 12vh;
+  background: #CCFF00;
+  opacity: 0.08;
+  box-shadow: 0 8px 32px 0 #0002;
+}

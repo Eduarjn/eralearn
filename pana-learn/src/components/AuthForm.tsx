@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useBranding } from '@/context/BrandingContext';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { useBranding } from '../context/BrandingContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,43 +8,60 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Eye, EyeOff, GraduationCap, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
+const SENHA_ADMIN = 'admin123';
+
 export function AuthForm() {
   const { signIn, signUp } = useAuth();
   const { branding } = useBranding();
-  
-  // Debug: verificar se o contexto está funcionando
-  console.log('🔍 AuthForm - branding:', branding);
-  
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [message, setMessage] = useState<string>('');
-  const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<'login' | 'register' | 'forgot'>('login');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [backgroundLoaded, setBackgroundLoaded] = useState(false);
+  const [logoLoaded, setLogoLoaded] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [tipoUsuario, setTipoUsuario] = useState<'admin' | 'cliente'>('cliente');
   const [senhaValidacao, setSenhaValidacao] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   const [resetMessage, setResetMessage] = useState('');
   const [resetError, setResetError] = useState('');
-  const SENHA_ADMIN = 'superadmin123';
+
+  // Testar se a imagem de fundo carrega
+  useEffect(() => {
+    const testBackgroundImage = () => {
+      const img = new Image();
+      img.onload = () => {
+        console.log('✅ Imagem de fundo carregada com sucesso');
+        setBackgroundLoaded(true);
+      };
+      img.onerror = () => {
+        console.error('❌ Erro ao carregar imagem de fundo, usando fallback');
+        setBackgroundLoaded(false);
+      };
+      img.src = '/lovable-uploads/aafcc16a-d43c-4f66-9fa4-70da46d38ccb.png';
+    };
+
+    testBackgroundImage();
+  }, []);
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setMessage('');
     
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    console.log('🔐 Iniciando login:', { email });
-
     try {
       const { error } = await signIn(email, password);
       
       if (error) {
-        setError(error.message || 'Erro no login');
-        console.error('❌ Erro de login:', error);
+        console.error('❌ Erro no login:', error);
+        setError(error.message || 'Erro ao fazer login');
       } else {
+        setMessage('Login realizado com sucesso!');
         console.log('✅ Login realizado com sucesso');
       }
     } catch (err) {
@@ -97,8 +114,8 @@ export function AuthForm() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
     const nome = formData.get('nome') as string;
-
-    console.log('📝 Iniciando cadastro:', { email, nome });
+    const tipoUsuario = formData.get('tipo_usuario') as 'admin' | 'cliente';
+    const senhaValidacao = formData.get('senha_validacao') as string;
 
     if (!nome || nome.trim() === '') {
       setError('Nome é obrigatório');
@@ -147,10 +164,9 @@ export function AuthForm() {
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background com imagem do escritório moderno */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: 'url(/lovable-uploads/aafcc16a-d43c-4f66-9fa4-70da46d38ccb.png)'
-        }}
+        className={`absolute inset-0 bg-cover bg-center bg-no-repeat ${
+          backgroundLoaded ? 'login-background' : 'login-background-fallback'
+        }`}
       >
         {/* Overlay escuro para contraste */}
         <div className="absolute inset-0 bg-black/50"></div>
@@ -162,7 +178,7 @@ export function AuthForm() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <img 
-              src={branding.logo_url} 
+              src={branding.logo_url || "/logotipoeralearn.png"} 
               alt="ERA Learn Logo" 
               id="login-logo"
               className="w-full h-32 lg:h-40 object-contain logo-rounded cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg"
@@ -179,9 +195,11 @@ export function AuthForm() {
               onError={(e) => {
                 console.error('❌ Erro ao carregar logo:', e);
                 e.currentTarget.src = "/logotipoeralearn.png";
+                setLogoLoaded(false);
               }}
               onLoad={() => {
-                console.log('✅ Logo carregado com sucesso:', branding.logo_url);
+                console.log('✅ Logo carregado com sucesso:', branding.logo_url || "/logotipoeralearn.png");
+                setLogoLoaded(true);
               }}
               title="Clique para visitar o site ERA"
             />
