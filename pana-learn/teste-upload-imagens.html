@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Upload de Imagens - ERA Learn</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        .preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste de Upload de Imagens - ERA Learn</h1>
+        <p>Esta página testa o upload de imagens para o Supabase Storage.</p>
+
+        <!-- Configuração -->
+        <div class="test-section">
+            <h3>⚙️ Configuração</h3>
+            <div>
+                <label>URL do Supabase:</label>
+                <input type="text" id="supabaseUrl" placeholder="https://seu-projeto.supabase.co" style="width: 100%; padding: 8px; margin: 5px 0;">
+            </div>
+            <div>
+                <label>Chave Anônima:</label>
+                <input type="text" id="supabaseKey" placeholder="sua-chave-anonima" style="width: 100%; padding: 8px; margin: 5px 0;">
+            </div>
+            <button onclick="testConnection()">Testar Conexão</button>
+            <div id="connectionStatus"></div>
+        </div>
+
+        <!-- Teste de Upload -->
+        <div class="test-section">
+            <h3>📤 Teste de Upload</h3>
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <p>Clique aqui para selecionar uma imagem</p>
+                <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+            </div>
+            <div id="fileInfo"></div>
+            <div id="preview"></div>
+            <button id="uploadBtn" onclick="uploadFile()" disabled>Fazer Upload</button>
+            <div id="uploadStatus"></div>
+        </div>
+
+        <!-- Teste de Carregamento -->
+        <div class="test-section">
+            <h3>🖼️ Teste de Carregamento de Imagens</h3>
+            <div>
+                <h4>Logo Principal:</h4>
+                <img src="/logotipoeralearn.png" alt="Logo Principal" class="preview" onload="logImageLoad('Logo Principal', true)" onerror="logImageLoad('Logo Principal', false)">
+            </div>
+            <div>
+                <h4>Logo SVG:</h4>
+                <img src="/logotipoeralearn.svg" alt="Logo SVG" class="preview" onload="logImageLoad('Logo SVG', true)" onerror="logImageLoad('Logo SVG', false)">
+            </div>
+            <div>
+                <h4>Favicon:</h4>
+                <img src="/favicon.ico" alt="Favicon" class="preview" onload="logImageLoad('Favicon', true)" onerror="logImageLoad('Favicon', false)">
+            </div>
+            <div>
+                <h4>Imagem de Fundo:</h4>
+                <img src="/lovable-uploads/aafcc16a-d43c-4f66-9fa4-70da46d38ccb.png" alt="Imagem de Fundo" class="preview" onload="logImageLoad('Imagem de Fundo', true)" onerror="logImageLoad('Imagem de Fundo', false)">
+            </div>
+        </div>
+
+        <!-- Logs -->
+        <div class="test-section">
+            <h3>📋 Logs</h3>
+            <div id="logs" class="log"></div>
+            <button onclick="clearLogs()">Limpar Logs</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        let supabase = null;
+        let selectedFile = null;
+
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logs.appendChild(logEntry);
+            logs.scrollTop = logs.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        function testConnection() {
+            const url = document.getElementById('supabaseUrl').value;
+            const key = document.getElementById('supabaseKey').value;
+            const status = document.getElementById('connectionStatus');
+
+            if (!url || !key) {
+                status.innerHTML = '<div class="error">Por favor, preencha URL e chave do Supabase</div>';
+                return;
+            }
+
+            try {
+                supabase = window.supabase.createClient(url, key);
+                log('🔗 Tentando conectar ao Supabase...', 'info');
+                
+                // Testar conexão fazendo uma consulta simples
+                supabase.from('branding_config').select('count').limit(1)
+                    .then(({ data, error }) => {
+                        if (error) {
+                            log(`❌ Erro na conexão: ${error.message}`, 'error');
+                            status.innerHTML = '<div class="error">Erro na conexão: ' + error.message + '</div>';
+                        } else {
+                            log('✅ Conexão estabelecida com sucesso!', 'success');
+                            status.innerHTML = '<div class="success">Conexão estabelecida com sucesso!</div>';
+                        }
+                    });
+            } catch (error) {
+                log(`❌ Erro ao criar cliente: ${error.message}`, 'error');
+                status.innerHTML = '<div class="error">Erro ao criar cliente: ' + error.message + '</div>';
+            }
+        }
+
+        function handleFileSelect(event) {
+            selectedFile = event.target.files[0];
+            const fileInfo = document.getElementById('fileInfo');
+            const preview = document.getElementById('preview');
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            if (selectedFile) {
+                fileInfo.innerHTML = `
+                    <div class="info">
+                        <strong>Arquivo selecionado:</strong> ${selectedFile.name}<br>
+                        <strong>Tamanho:</strong> ${(selectedFile.size / 1024).toFixed(2)} KB<br>
+                        <strong>Tipo:</strong> ${selectedFile.type}
+                    </div>
+                `;
+
+                // Preview da imagem
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `<img src="${e.target.result}" alt="Preview" class="preview">`;
+                };
+                reader.readAsDataURL(selectedFile);
+
+                uploadBtn.disabled = false;
+                log(`📁 Arquivo selecionado: ${selectedFile.name} (${selectedFile.size} bytes)`, 'info');
+            }
+        }
+
+        async function uploadFile() {
+            if (!selectedFile || !supabase) {
+                log('❌ Nenhum arquivo selecionado ou Supabase não conectado', 'error');
+                return;
+            }
+
+            const uploadStatus = document.getElementById('uploadStatus');
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            uploadBtn.disabled = true;
+            uploadStatus.innerHTML = '<div class="info">Fazendo upload...</div>';
+            log('📤 Iniciando upload...', 'info');
+
+            try {
+                // Determinar pasta baseada no tipo de arquivo
+                let folder = 'logos';
+                let fileName = 'test-upload';
+
+                if (selectedFile.type.includes('favicon') || selectedFile.name.includes('favicon')) {
+                    folder = 'favicons';
+                    fileName = 'favicon';
+                } else if (selectedFile.type.includes('background') || selectedFile.name.includes('background')) {
+                    folder = 'backgrounds';
+                    fileName = 'background';
+                }
+
+                const fileExt = selectedFile.name.split('.').pop();
+                const filePath = `${folder}/${fileName}-${Date.now()}.${fileExt}`;
+
+                log(`📁 Fazendo upload para: ${filePath}`, 'info');
+
+                const { data, error } = await supabase.storage
+                    .from('branding')
+                    .upload(filePath, selectedFile, {
+                        upsert: true,
+                        cacheControl: '3600'
+                    });
+
+                if (error) {
+                    throw error;
+                }
+
+                log('✅ Upload concluído com sucesso!', 'success');
+                log(`📁 Arquivo salvo em: ${filePath}`, 'info');
+
+                // Obter URL pública
+                const { data: urlData } = supabase.storage
+                    .from('branding')
+                    .getPublicUrl(filePath);
+
+                log(`🔗 URL pública: ${urlData.publicUrl}`, 'info');
+
+                uploadStatus.innerHTML = `
+                    <div class="success">
+                        <strong>Upload concluído!</strong><br>
+                        Arquivo: ${filePath}<br>
+                        URL: <a href="${urlData.publicUrl}" target="_blank">${urlData.publicUrl}</a>
+                    </div>
+                `;
+
+                // Testar carregamento da imagem
+                testImageLoad(urlData.publicUrl);
+
+            } catch (error) {
+                log(`❌ Erro no upload: ${error.message}`, 'error');
+                uploadStatus.innerHTML = `<div class="error">Erro no upload: ${error.message}</div>`;
+            } finally {
+                uploadBtn.disabled = false;
+            }
+        }
+
+        function testImageLoad(url, name = 'Imagem') {
+            const img = new Image();
+            img.onload = function() {
+                log(`✅ ${name} carregada com sucesso: ${url}`, 'success');
+            };
+            img.onerror = function() {
+                log(`❌ Erro ao carregar ${name}: ${url}`, 'error');
+            };
+            img.src = url;
+        }
+
+        function logImageLoad(name, success) {
+            if (success) {
+                log(`✅ ${name} carregada com sucesso`, 'success');
+            } else {
+                log(`❌ Erro ao carregar ${name}`, 'error');
+            }
+        }
+
+        // Inicialização
+        log('🚀 Página de teste carregada', 'info');
+        log('📋 Para usar: 1) Configure URL e chave do Supabase, 2) Teste conexão, 3) Faça upload de uma imagem', 'info');
+    </script>
+</body>
+</html>
