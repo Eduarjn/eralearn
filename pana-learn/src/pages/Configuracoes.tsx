@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Settings, Globe, Mail, Shield, Database, Bell, Palette, UserCheck, Award, Image as ImageIcon } from 'lucide-react';
+import { Settings, Globe, Mail, Shield, Database, Bell, Palette, UserCheck, Award, Image as ImageIcon, Building } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -411,9 +411,12 @@ const WhiteLabel = () => {
   const [subLogoPreview, setSubLogoPreview] = useState<string | null>(null);
   const [faviconFile, setFaviconFile] = useState<File | null>(null);
   const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
+  const [backgroundFile, setBackgroundFile] = useState<File | null>(null);
+  const [backgroundPreview, setBackgroundPreview] = useState<string | null>(null);
   const [primaryColor, setPrimaryColor] = useState(branding.primary_color);
   const [secondaryColor, setSecondaryColor] = useState(branding.secondary_color);
   const [companyName, setCompanyName] = useState(branding.company_name);
+  const [companySlogan, setCompanySlogan] = useState(branding.company_slogan || 'Smart Training');
   const [uploading, setUploading] = useState(false);
   
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -472,31 +475,104 @@ const WhiteLabel = () => {
     }
   };
 
+  const handleBackgroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar tipo de arquivo
+      if (!file.type.startsWith('image/')) {
+        toast({ 
+          title: 'Arquivo inválido', 
+          description: 'Por favor, selecione uma imagem.',
+          variant: 'destructive' 
+        });
+        return;
+      }
+
+      // Validar tamanho (máximo 10MB para imagens de fundo)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({ 
+          title: 'Arquivo muito grande', 
+          description: 'O arquivo deve ter no máximo 10MB.',
+          variant: 'destructive' 
+        });
+        return;
+      }
+
+      setBackgroundFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setBackgroundPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = async () => {
     try {
       setUploading(true);
       
+      // Função para fazer upload de arquivo
+      const uploadFile = async (file: File, folder: string, fileName: string) => {
+        const fileExt = file.name.split('.').pop();
+        const filePath = `${folder}/${fileName}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('branding')
+          .upload(filePath, file, { upsert: true });
+        
+        if (uploadError) {
+          throw new Error(`Erro no upload: ${uploadError.message}`);
+        }
+        
+        const { data } = supabase.storage.from('branding').getPublicUrl(filePath);
+        return data.publicUrl;
+      };
+      
+      // Upload do logo principal
       if (logoFile) {
-        // Aqui você pode implementar o upload para o servidor
-        // Por enquanto, vamos usar o preview como URL
-        await updateLogo(logoPreview || branding.logo_url);
+        const logoUrl = await uploadFile(logoFile, 'logos', 'main-logo');
+        await updateLogo(logoUrl);
+        setLogoFile(null);
+        setLogoPreview(null);
       }
       
+      // Upload do sublogo
       if (subLogoFile) {
-        // Aqui você pode implementar o upload para o servidor
-        // Por enquanto, vamos usar o preview como URL
-        await updateSubLogo(subLogoPreview || branding.sub_logo_url);
+        const subLogoUrl = await uploadFile(subLogoFile, 'logos', 'sub-logo');
+        await updateSubLogo(subLogoUrl);
+        setSubLogoFile(null);
+        setSubLogoPreview(null);
       }
 
+      // Upload do favicon
       if (faviconFile) {
-        // Aqui você pode implementar o upload para o servidor
-        // Por enquanto, vamos usar o preview como URL
-        await updateFavicon(faviconPreview || branding.favicon_url);
+        const faviconUrl = await uploadFile(faviconFile, 'favicons', 'favicon');
+        await updateFavicon(faviconUrl);
+        setFaviconFile(null);
+        setFaviconPreview(null);
+      }
+
+      // Upload da imagem de fundo
+      if (backgroundFile) {
+        const backgroundUrl = await uploadFile(backgroundFile, 'backgrounds', 'login-background');
+        // Atualizar no contexto de branding (precisamos adicionar essa função)
+        await updateBackground(backgroundUrl);
+        setBackgroundFile(null);
+        setBackgroundPreview(null);
       }
 
       // Atualizar cores se foram alteradas
       if (primaryColor !== branding.primary_color || secondaryColor !== branding.secondary_color) {
         await updateColors(primaryColor, secondaryColor);
+      }
+
+      // Atualizar informações da empresa se foram alteradas
+      if (companyName !== branding.company_name) {
+        await updateCompanyName(companyName);
+      }
+
+      if (companySlogan !== branding.company_slogan) {
+        await updateCompanySlogan(companySlogan);
       }
       
       toast({ 
@@ -530,7 +606,7 @@ const WhiteLabel = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Logos */}
+        {/* Logos e Imagens */}
         <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
           <CardHeader className="bg-gradient-to-r from-era-black/5 via-era-gray-medium/10 to-era-green/5 rounded-t-lg">
             <CardTitle className="flex items-center gap-2 text-era-black">
@@ -538,10 +614,10 @@ const WhiteLabel = () => {
               Logos e Imagens
             </CardTitle>
             <CardDescription className="text-era-gray-medium">
-              Carregue os logos da sua empresa
+              Carregue os logos e imagens da sua empresa
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             {/* Logo Principal */}
             <div className="space-y-4">
               <div>
@@ -613,7 +689,7 @@ const WhiteLabel = () => {
         {/* Favicon */}
         <div className="space-y-4">
           <div>
-            <Label className="text-sm font-medium">Favicon (Ícone da Aba)</Label>
+            <Label className="text-sm font-medium text-era-black">Favicon (Ícone da Aba)</Label>
             <div className="mt-2">
               <input
                 type="file"
@@ -623,7 +699,7 @@ const WhiteLabel = () => {
                 id="faviconUpload"
               />
               <label htmlFor="faviconUpload">
-                <Button variant="outline" className="w-full cursor-pointer">
+                <Button variant="outline" className="w-full cursor-pointer border-era-gray-medium/30 hover:border-era-green text-era-gray-medium">
                   Upload Favicon
                 </Button>
               </label>
@@ -632,11 +708,47 @@ const WhiteLabel = () => {
                   <img 
                     src={faviconPreview || branding.favicon_url} 
                     alt="Favicon" 
-                    className="w-8 h-8 object-contain rounded border bg-gray-50"
+                    className="w-8 h-8 object-contain rounded border bg-era-gray-light"
                   />
                   <div>
-                    <p className="text-sm font-medium">Favicon Atual</p>
-                    <p className="text-xs text-gray-500">Ícone que aparece na aba do navegador</p>
+                    <p className="text-sm font-medium text-era-black">Favicon Atual</p>
+                    <p className="text-xs text-era-gray-medium">Ícone que aparece na aba do navegador</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Imagem de Fundo */}
+        <div className="space-y-4">
+          <div>
+            <Label className="text-sm font-medium text-era-black">Imagem de Fundo (Login)</Label>
+            <div className="mt-2">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleBackgroundUpload}
+                className="hidden"
+                id="backgroundUpload"
+              />
+              <label htmlFor="backgroundUpload">
+                <Button variant="outline" className="w-full cursor-pointer border-era-gray-medium/30 hover:border-era-green text-era-gray-medium">
+                  Upload Imagem de Fundo
+                </Button>
+              </label>
+              {(backgroundPreview || branding.background_url) && (
+                <div className="mt-2 space-y-2">
+                  <div className="relative w-full h-32 rounded-lg overflow-hidden border bg-era-gray-light">
+                    <img 
+                      src={backgroundPreview || branding.background_url} 
+                      alt="Imagem de Fundo" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-era-black">Imagem de Fundo Atual</p>
+                    <p className="text-xs text-era-gray-medium">Aparece na tela de login e outras páginas</p>
                   </div>
                 </div>
               )}
@@ -710,6 +822,39 @@ const WhiteLabel = () => {
               </div>
             </div>
           </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Informações da Empresa */}
+        <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+          <CardHeader className="bg-gradient-to-r from-era-black/5 via-era-gray-medium/10 to-era-green/5 rounded-t-lg">
+            <CardTitle className="flex items-center gap-2 text-era-black">
+              <Building className="h-5 w-5 text-era-green" />
+              Informações da Empresa
+            </CardTitle>
+            <CardDescription className="text-era-gray-medium">
+              Configure o nome e slogan da sua empresa
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium text-era-black">Nome da Empresa</Label>
+              <Input
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="Digite o nome da sua empresa"
+                className="mt-1 border-era-gray-medium/30 focus:border-era-green"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-era-black">Slogan da Empresa</Label>
+              <Input
+                value={companySlogan}
+                onChange={(e) => setCompanySlogan(e.target.value)}
+                placeholder="Digite o slogan da sua empresa"
+                className="mt-1 border-era-gray-medium/30 focus:border-era-green"
+              />
             </div>
           </CardContent>
         </Card>

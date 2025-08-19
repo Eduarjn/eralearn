@@ -5,6 +5,7 @@ interface BrandingConfig {
   logo_url: string;
   sub_logo_url: string;
   favicon_url: string;
+  background_url: string;
   primary_color: string;
   secondary_color: string;
   company_name: string;
@@ -17,8 +18,10 @@ interface BrandingContextType {
   updateLogo: (url: string) => Promise<void>;
   updateSubLogo: (url: string) => Promise<void>;
   updateFavicon: (url: string) => Promise<void>;
+  updateBackground: (url: string) => Promise<void>;
   updateColors: (primary: string, secondary: string) => Promise<void>;
   updateCompanyName: (name: string) => Promise<void>;
+  updateCompanySlogan: (slogan: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -26,6 +29,7 @@ const defaultBranding: BrandingConfig = {
   logo_url: '/logotipoeralearn.png',
   sub_logo_url: '/era-sub-logo.png',
   favicon_url: '/favicon.ico',
+  background_url: '/lovable-uploads/aafcc16a-d43c-4f66-9fa4-70da46d38ccb.png',
   primary_color: '#CCFF00',
   secondary_color: '#232323',
   company_name: 'ERA Learn',
@@ -156,14 +160,24 @@ export const BrandingProvider: React.FC<BrandingProviderProps> = ({ children }) 
     await updateBrandingInDB({ company_name: name });
   };
 
+  const updateCompanySlogan = async (slogan: string) => {
+    await updateBrandingInDB({ company_slogan: slogan });
+  };
+
+  const updateBackground = async (url: string) => {
+    await updateBrandingInDB({ background_url: url });
+  };
+
   return (
     <BrandingContext.Provider value={{
       branding,
       updateLogo,
       updateSubLogo,
       updateFavicon,
+      updateBackground,
       updateColors,
       updateCompanyName,
+      updateCompanySlogan,
       loading
     }}>
       {children}
