@@ -61,38 +61,66 @@ export function useOptionalQuiz(courseId: string) {
       let quizId: string | null = null;
       
       // Primeiro, tentar usar o mapeamento específico por curso
-      const { data: mappingData } = await supabase
-        .from('curso_quiz_mapping')
-        .select('quiz_id')
-        .eq('curso_id', courseId)
-        .single();
+      let mappingData = null;
+      try {
+        const { data: mappingResult } = await supabase
+          .from('curso_quiz_mapping')
+          .select('quiz_id')
+          .eq('curso_id', courseId)
+          .maybeSingle();
+
+        mappingData = mappingResult;
+      } catch (mappingErr) {
+        console.error('Erro ao buscar mapeamento de quiz:', mappingErr);
+      }
 
       if (mappingData?.quiz_id) {
         // Usar o quiz mapeado diretamente
-        const { data: quizData } = await supabase
-          .from('quizzes')
-          .select('id')
-          .eq('id', mappingData.quiz_id)
-          .eq('ativo', true)
-          .single();
+        let quizData = null;
+        try {
+          const { data: quizResult } = await supabase
+            .from('quizzes')
+            .select('id')
+            .eq('id', mappingData.quiz_id)
+            .eq('ativo', true)
+            .maybeSingle();
+
+          quizData = quizResult;
+        } catch (quizErr) {
+          console.error('Erro ao buscar quiz mapeado:', quizErr);
+        }
 
         quizAvailable = !!quizData;
         quizId = quizData?.id || null;
       } else {
         // Fallback: usar a categoria do curso (método antigo)
-        const { data: courseData } = await supabase
-          .from('cursos')
-          .select('categoria')
-          .eq('id', courseId)
-          .single();
+        let courseData = null;
+        try {
+          const { data: courseResult } = await supabase
+            .from('cursos')
+            .select('categoria')
+            .eq('id', courseId)
+            .maybeSingle();
+
+          courseData = courseResult;
+        } catch (courseErr) {
+          console.error('Erro ao buscar dados do curso:', courseErr);
+        }
 
         if (courseData?.categoria) {
-          const { data: quizData } = await supabase
-            .from('quizzes')
-            .select('id')
-            .eq('categoria', courseData.categoria)
-            .eq('ativo', true)
-            .single();
+          let quizData = null;
+          try {
+            const { data: quizResult } = await supabase
+              .from('quizzes')
+              .select('id')
+              .eq('categoria', courseData.categoria)
+              .eq('ativo', true)
+              .maybeSingle();
+
+            quizData = quizResult;
+          } catch (quizErr) {
+            console.error('Erro ao buscar quiz por categoria:', quizErr);
+          }
 
           quizAvailable = !!quizData;
           quizId = quizData?.id || null;
@@ -101,23 +129,37 @@ export function useOptionalQuiz(courseId: string) {
 
       // Verificar se o usuário já completou o quiz para este curso
       if (quizId) {
-        const { data: quizProgress } = await supabase
-          .from('progresso_quiz')
-          .select('id, aprovado')
-          .eq('usuario_id', userProfile.id)
-          .eq('quiz_id', quizId)
-          .single();
+        let quizProgress = null;
+        try {
+          const { data: progressResult } = await supabase
+            .from('progresso_quiz')
+            .select('id, aprovado')
+            .eq('usuario_id', userProfile.id)
+            .eq('quiz_id', quizId)
+            .maybeSingle();
+
+          quizProgress = progressResult;
+        } catch (progressErr) {
+          console.error('Erro ao buscar progresso do quiz:', progressErr);
+        }
 
         quizAlreadyCompleted = !!quizProgress;
       }
 
       // Verificar se já existe certificado para este curso
-      const { data: existingCertificate } = await supabase
-        .from('certificados')
-        .select('id')
-        .eq('usuario_id', userProfile.id)
-        .eq('curso_id', courseId)
-        .single();
+      let existingCertificate = null;
+      try {
+        const { data: certResult } = await supabase
+          .from('certificados')
+          .select('id')
+          .eq('usuario_id', userProfile.id)
+          .eq('curso_id', courseId)
+          .maybeSingle();
+
+        existingCertificate = certResult;
+      } catch (certErr) {
+        console.error('Erro ao buscar certificado existente:', certErr);
+      }
 
       // Quiz deve aparecer apenas se:
       // 1. Curso foi concluído

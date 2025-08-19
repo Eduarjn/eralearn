@@ -98,28 +98,42 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
 
       if (questionsError) throw questionsError;
 
-      // Buscar progresso do usuário (se existir)
-      const { data: progressData, error: progressError } = await supabase
-        .from('progresso_quiz')
-        .select('*')
-        .eq('usuario_id', userId)
-        .eq('quiz_id', quizId)
-        .single();
+      // Buscar progresso do usuário (se existir) - SEM .single()
+      let progressData = null;
+      try {
+        const { data: progressResult, error: progressError } = await supabase
+          .from('progresso_quiz')
+          .select('*')
+          .eq('usuario_id', userId)
+          .eq('quiz_id', quizId)
+          .maybeSingle(); // Usar maybeSingle em vez de single
 
-      if (progressError && progressError.code !== 'PGRST116') {
-        console.error('Erro ao buscar progresso:', progressError);
+        if (progressError) {
+          console.error('Erro ao buscar progresso:', progressError);
+        } else {
+          progressData = progressResult;
+        }
+      } catch (progressErr) {
+        console.error('Erro ao buscar progresso do quiz:', progressErr);
       }
 
-      // Buscar certificado (se existir)
-      const { data: certData, error: certError } = await supabase
-        .from('certificados')
-        .select('*')
-        .eq('usuario_id', userId)
-        .eq('curso_id', courseId)
-        .single();
+      // Buscar certificado (se existir) - SEM .single()
+      let certData = null;
+      try {
+        const { data: certResult, error: certError } = await supabase
+          .from('certificados')
+          .select('*')
+          .eq('usuario_id', userId)
+          .eq('curso_id', courseId)
+          .maybeSingle(); // Usar maybeSingle em vez de single
 
-      if (certError && certError.code !== 'PGRST116') {
-        console.error('Erro ao buscar certificado:', certError);
+        if (certError) {
+          console.error('Erro ao buscar certificado:', certError);
+        } else {
+          certData = certResult;
+        }
+      } catch (certErr) {
+        console.error('Erro ao buscar certificado:', certErr);
       }
 
       // Montar configuração do quiz
@@ -142,8 +156,8 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
       };
 
       setQuizConfig(config);
-      setUserProgress(progressData || null);
-      setCertificate(certData || null);
+      setUserProgress(progressData);
+      setCertificate(certData);
 
     } catch (err) {
       console.error('Erro ao carregar quiz:', err);
@@ -201,13 +215,17 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
           console.error('Erro ao gerar certificado:', certError);
         } else {
           // Buscar certificado gerado
-          const { data: certData } = await supabase
+          const { data: certData, error: certError } = await supabase
             .from('certificados')
             .select('*')
             .eq('id', certId)
-            .single();
+            .maybeSingle();
 
-          setCertificate(certData);
+          if (certError) {
+            console.error('Erro ao buscar certificado gerado:', certError);
+          } else {
+            setCertificate(certData);
+          }
         }
       }
 
