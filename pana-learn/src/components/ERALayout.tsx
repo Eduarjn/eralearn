@@ -24,7 +24,7 @@ export function ERALayout({ children, breadcrumbs = [], cursoNome = '', userNome
   return (
     <>
       <Sidebar>
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full sidebar-layout">
         {/* Header */}
         <header className="bg-surface border-b border-futuristic px-4 py-3 lg:px-6">
           <div className="flex items-center justify-between">
@@ -87,9 +87,10 @@ export function ERALayout({ children, breadcrumbs = [], cursoNome = '', userNome
 
         {/* Page content */}
         <main 
-          className="flex-1 p-4 lg:p-6 overflow-y-auto transition-[margin-left] duration-200 ease-in-out"
+          className="flex-1 p-4 lg:p-6 overflow-y-auto transition-all duration-200 ease-in-out sidebar-content main-content"
           style={{ 
-            marginLeft: (isDesktop || isLargeDesktop) ? `${sidebarWidth}px` : '0px'
+            marginLeft: (isDesktop || isLargeDesktop) ? `${sidebarWidth}px` : '0px',
+            width: (isDesktop || isLargeDesktop) ? `calc(100% - ${sidebarWidth}px)` : '100%'
           }}
         >
           {children}

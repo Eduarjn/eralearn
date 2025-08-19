@@ -209,10 +209,42 @@
   }
   
   /* Garantir que o scroll funcione em todos os navegadores */
-  .overflow-y-auto {
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch;
+.overflow-y-auto {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Corrigir espaçamento entre sidebar e conteúdo */
+.sidebar-layout {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.sidebar-content {
+  flex: 1;
+  margin-left: 0;
+  transition: margin-left 0.2s ease-in-out;
+}
+
+@media (min-width: 1024px) {
+  .sidebar-content {
+    margin-left: 256px; /* 64 * 4 = 256px (w-64) */
   }
+}
+
+/* Remover espaços indesejados */
+.sidebar-layout > * {
+  margin: 0;
+  padding: 0;
+}
+
+/* Garantir que o conteúdo principal ocupe todo o espaço disponível */
+.main-content {
+  flex: 1;
+  width: 100%;
+  min-height: 100vh;
+}
   
   /* Prevenir problemas de scroll em mobile */
   .mobile-scroll-fix {
