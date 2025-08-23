@@ -232,3 +232,7 @@ BEGIN
   RAISE NOTICE 'O erro 406 deve ser resolvido.';
 END $$;
 
+
+
+
+

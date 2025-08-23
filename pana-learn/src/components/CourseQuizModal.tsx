@@ -382,7 +382,7 @@ export function CourseQuizModal({
             ) : (
               <Button
                 onClick={handleNextQuestion}
-                disabled={!answers[currentQuestion?.id]}
+                disabled={answers[currentQuestion?.id] === undefined}
               >
                 Próxima
                 <ArrowRight className="h-4 w-4 ml-2" />

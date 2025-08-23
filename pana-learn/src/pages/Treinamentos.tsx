@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Plus, Video, Eye, Download, Youtube, Trash, BookOpen, Clock, Users, TrendingUp, Star, Award, Zap, ArrowLeft, Settings } from 'lucide-react';
+import { Search, Filter, Plus, Video, Eye, Download, Youtube, Trash, BookOpen, Clock, Users, TrendingUp, Star, Award, Zap, ArrowLeft, Settings, ListOrdered } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -1511,13 +1511,23 @@ const Treinamentos = () => {
                   </div>
                 </div>
                 {isAdmin && (
-                  <Button 
-                    onClick={() => setShowUpload(true)}
-                    className="bg-gradient-to-r from-era-black via-era-gray-medium to-era-green hover:from-era-black/90 hover:via-era-gray-medium/90 hover:to-era-green/90 text-white font-medium px-6 py-2 rounded-full flex items-center gap-2 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
-                  >
-                    <Settings className="h-4 w-4" />
-                    Novo Treinamento
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => setShowUpload(true)}
+                      className="bg-gradient-to-r from-era-black via-era-gray-medium to-era-green hover:from-era-black/90 hover:via-era-gray-medium/90 hover:to-era-green/90 text-white font-medium px-6 py-2 rounded-full flex items-center gap-2 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Novo Treinamento
+                    </Button>
+                    <Button 
+                      onClick={() => navigate('/admin/gerenciar-ordem-videos')}
+                      variant="outline"
+                      className="border-era-green text-era-green hover:bg-era-green hover:text-white font-medium px-6 py-2 rounded-full flex items-center gap-2 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
+                    >
+                      <ListOrdered className="h-4 w-4" />
+                      Gerenciar Ordem
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>

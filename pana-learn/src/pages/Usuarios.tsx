@@ -41,6 +41,9 @@ const Usuarios = () => {
   const [showNewUserForm, setShowNewUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState<Database['public']['Tables']['usuarios']['Row'] | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
   const [newUser, setNewUser] = useState({
     nome: '',
     email: '',
@@ -375,6 +378,43 @@ const Usuarios = () => {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
       toast({ title: 'Erro ao atualizar usuário', description: message, variant: 'destructive' });
+    }
+  };
+
+  const handleChangeUserPassword = async () => {
+    if (!editingUser) return;
+
+    // Validações
+    if (!newPassword || newPassword.length < 6) {
+      toast({ title: 'Nova senha deve ter pelo menos 6 caracteres', variant: 'destructive' });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({ title: 'As senhas não coincidem', variant: 'destructive' });
+      return;
+    }
+
+    setChangingPassword(true);
+
+    try {
+      // Usar a API admin do Supabase para alterar a senha
+      const { error } = await supabase.auth.admin.updateUserById(
+        editingUser.id,
+        { password: newPassword }
+      );
+
+      if (error) throw error;
+
+      toast({ title: 'Senha alterada com sucesso!' });
+      setNewPassword('');
+      setConfirmPassword('');
+      
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      toast({ title: 'Erro ao alterar senha', description: message, variant: 'destructive' });
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -985,17 +1025,7 @@ const Usuarios = () => {
                   className="col-span-3"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-login" className="text-right">
-                  Login
-                </Label>
-                <Input
-                  id="edit-login"
-                  value={editingUser.login || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, login: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-tipo" className="text-right">
                   Tipo
@@ -1003,11 +1033,12 @@ const Usuarios = () => {
                 <select
                   id="edit-tipo"
                   value={editingUser.tipo_usuario}
-                  onChange={(e) => setEditingUser({ ...editingUser, tipo_usuario: e.target.value })}
+                  onChange={(e) => setEditingUser({ ...editingUser, tipo_usuario: e.target.value as Database['public']['Enums']['user_type'] })}
                   className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="cliente">Cliente</option>
                   <option value="admin">Administrador</option>
+                  <option value="admin_master">Administrador Master</option>
                 </select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -1017,17 +1048,64 @@ const Usuarios = () => {
                 <select
                   id="edit-status"
                   value={editingUser.status}
-                  onChange={(e) => setEditingUser({ ...editingUser, status: e.target.value })}
+                  onChange={(e) => setEditingUser({ ...editingUser, status: e.target.value as Database['public']['Enums']['status_type'] })}
                   className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="ativo">Ativo</option>
                   <option value="inativo">Inativo</option>
+                  <option value="pendente">Pendente</option>
                 </select>
+              </div>
+              
+              {/* Seção de Alteração de Senha */}
+              <div className="border-t pt-4 mt-4">
+                <h4 className="text-sm font-medium mb-4 text-gray-700">Alterar Senha</h4>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="new-password" className="text-right">
+                      Nova Senha
+                    </Label>
+                    <Input
+                      id="new-password"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Mínimo 6 caracteres"
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="confirm-password" className="text-right">
+                      Confirmar Senha
+                    </Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirme a nova senha"
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleChangeUserPassword}
+                      disabled={changingPassword || !newPassword || newPassword !== confirmPassword}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      {changingPassword ? 'Alterando...' : 'Alterar Senha'}
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditModal(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowEditModal(false);
+              setNewPassword('');
+              setConfirmPassword('');
+            }}>
               Cancelar
             </Button>
             <Button onClick={handleSaveEdit}>

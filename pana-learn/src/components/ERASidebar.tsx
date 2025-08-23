@@ -19,6 +19,7 @@ import {
   Pin,
   PinOff
 } from "lucide-react";
+import { resolveLogoPath, imageFallbacks } from "@/utils/imageUtils";
 
 import { Button } from "@/components/ui/button";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
@@ -243,7 +244,7 @@ export function ERASidebar() {
       {/* Logo ERA Learn */}
       <div className="relative">
         <img
-          src={branding.logo_url || '/logotipoeralearn.png'}
+          src={resolveLogoPath(branding.logo_url)}
           alt="ERA Learn Logo"
           id="sidebar-logo"
           className={`object-contain logo-rounded cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg ${
@@ -257,7 +258,19 @@ export function ERASidebar() {
           onClick={() => window.open('https://era.com.br/', '_blank')}
           onError={(e) => {
             console.error('❌ Erro ao carregar logo:', e);
-            e.currentTarget.src = "/logotipoeralearn.png";
+            // Tentar fallbacks em ordem
+            const currentSrc = e.currentTarget.src;
+            const fallbackIndex = imageFallbacks.logo.findIndex(fallback => 
+              currentSrc.includes(fallback)
+            );
+            
+            if (fallbackIndex < imageFallbacks.logo.length - 1) {
+              const nextFallback = imageFallbacks.logo[fallbackIndex + 1];
+              console.log(`🔄 Tentando fallback: ${nextFallback}`);
+              e.currentTarget.src = resolveLogoPath(nextFallback);
+            } else {
+              console.error('❌ Todos os fallbacks falharam');
+            }
           }}
           title="Clique para visitar o site ERA"
         />

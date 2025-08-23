@@ -1,6 +1,7 @@
 import React from 'react';
 import { useMobile } from '@/hooks/use-mobile';
 import { useBranding } from '@/context/BrandingContext';
+import { resolveLogoPath, imageFallbacks } from '@/utils/imageUtils';
 
 interface ERALogoProps {
   className?: string;
@@ -48,22 +49,36 @@ export const ERALogo: React.FC<ERALogoProps> = ({
 
   // Componente de erro para fallback
   const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
-    if (showFallback) {
-      const img = event.target as HTMLImageElement;
-      img.style.display = 'none';
-      const parent = img.parentElement;
-      if (parent) {
-        // Adicionar o texto de fallback
-        const fallbackElement = document.createElement('span');
-        fallbackElement.className = 'font-bold text-gray-900 dark:text-white text-sm';
-        fallbackElement.textContent = 'ERA Learn';
-        parent.appendChild(fallbackElement);
+    const img = event.target as HTMLImageElement;
+    const currentSrc = img.src;
+    
+    // Tentar fallbacks em ordem
+    const fallbackIndex = imageFallbacks.logo.findIndex(fallback => 
+      currentSrc.includes(fallback)
+    );
+    
+    if (fallbackIndex < imageFallbacks.logo.length - 1) {
+      const nextFallback = imageFallbacks.logo[fallbackIndex + 1];
+      console.log(`🔄 ERALogo: Tentando fallback: ${nextFallback}`);
+      img.src = resolveLogoPath(nextFallback);
+    } else {
+      console.error('❌ ERALogo: Todos os fallbacks falharam');
+      if (showFallback) {
+        img.style.display = 'none';
+        const parent = img.parentElement;
+        if (parent) {
+          // Adicionar o texto de fallback
+          const fallbackElement = document.createElement('span');
+          fallbackElement.className = 'font-bold text-gray-900 dark:text-white text-sm';
+          fallbackElement.textContent = 'ERA Learn';
+          parent.appendChild(fallbackElement);
+        }
       }
     }
   };
 
   // Logo principal da ERA Learn
-  const logoSrc = branding.logo_url || '/logotipoeralearn.png';
+  const logoSrc = resolveLogoPath(branding.logo_url);
 
   if (variant === 'icon') {
     return (

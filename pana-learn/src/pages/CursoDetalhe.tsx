@@ -24,6 +24,7 @@ import { QuizNotification } from '@/components/QuizNotification';
 import { CourseQuizModal } from '@/components/CourseQuizModal';
 import { toast } from '@/components/ui/use-toast';
 import { VideoUpload } from '@/components/VideoUpload';
+import { VideoInfo } from '@/components/VideoInfo';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Adicionar tipo auxiliar para vídeo com modulo_id e categoria
@@ -133,7 +134,7 @@ const CursoDetalhe = () => {
     isCourseCompleted, 
     certificate, 
     generateCertificate 
-  } = useQuiz(userId, currentCategory);
+  } = useQuiz(userId, id);
 
   // Calcular progresso do curso
   const calculateCourseProgress = React.useCallback(async () => {
@@ -340,7 +341,7 @@ const CursoDetalhe = () => {
             .select('*')
             .eq('categoria', cursoData.categoria)
             .is('curso_id', null)
-            .order('data_criacao', { ascending: false });
+            .order('ordem', { ascending: true });
 
           if (categoryError) {
             console.error('❌ Erro ao buscar vídeos por categoria:', categoryError);
@@ -590,7 +591,7 @@ const CursoDetalhe = () => {
             <div className="lg:col-span-2 flex flex-col gap-6">
               {selectedVideo ? (
                 <div className="bg-white rounded-2xl shadow-lg p-6 mb-2">
-                  <h2 className="text-xl font-bold mb-2">{selectedVideo.titulo}</h2>
+                  {/* Player de Vídeo */}
                   <VideoPlayerWithProgress
                     video={selectedVideo}
                     cursoId={id || ''}
@@ -599,7 +600,15 @@ const CursoDetalhe = () => {
                     onCourseComplete={handleCourseComplete}
                     totalVideos={totalVideos}
                     completedVideos={completedVideos}
-                    className="mb-4"
+                    className="mb-6"
+                  />
+                  
+                  {/* Informações do Vídeo */}
+                  <VideoInfo
+                    titulo={selectedVideo.titulo}
+                    descricao={selectedVideo.descricao}
+                    duracao={selectedVideo.duracao}
+                    progresso={progress[selectedVideo.id]}
                   />
                   
                   {/* Seção de Quiz (quando vídeos estão completos) */}

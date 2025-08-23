@@ -48,7 +48,7 @@ export const VideoChecklist: React.FC<VideoChecklistProps> = ({
           .from('videos')
           .select('*')
           .eq('modulo_id', moduloId)
-          .order('data_criacao', { ascending: true });
+          .order('ordem', { ascending: true });
 
         if (videosError) {
           console.error('Erro ao carregar vídeos:', videosError);

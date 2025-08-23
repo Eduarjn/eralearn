@@ -675,6 +675,18 @@ export function VideoUpload({ onClose, onSuccess, preSelectedCourseId }: VideoUp
 
       console.log('✅ VideoUpload - Curso validado:', courseCheck);
 
+      // Obter próxima ordem disponível
+      const { data: nextOrderData, error: orderError } = await supabase.rpc('obter_proxima_ordem_video', {
+        p_curso_id: selectedCourseId
+      });
+
+      if (orderError) {
+        console.error('❌ Erro ao obter próxima ordem:', orderError);
+        throw new Error('Erro ao calcular ordem do vídeo');
+      }
+
+      const nextOrder = nextOrderData || 1;
+
       // Dados para inserção no banco
       const videoDataToInsert = {
         titulo: videoData.titulo,
@@ -684,7 +696,8 @@ export function VideoUpload({ onClose, onSuccess, preSelectedCourseId }: VideoUp
         thumbnail_url: thumbnailUrl,
         categoria: courseCategory,
         curso_id: selectedCourseId,
-        modulo_id: selectedModuleId || null
+        modulo_id: selectedModuleId || null,
+        ordem: nextOrder
       };
 
       console.log('📝 VideoUpload - Dados para inserção:', {

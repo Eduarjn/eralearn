@@ -175,3 +175,7 @@ BEGIN
   RAISE NOTICE 'Teste a funcionalidade com um usuário existente.';
 END $$;
 
+
+
+
+

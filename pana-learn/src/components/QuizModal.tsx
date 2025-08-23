@@ -232,7 +232,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                 {currentQuestionIndex < totalQuestions - 1 ? (
                   <Button
                     onClick={handleNextQuestion}
-                    disabled={!selectedAnswers[currentQuestion?.id || '']}
+                    disabled={selectedAnswers[currentQuestion?.id || ''] === undefined}
                   >
                     Próxima
                   </Button>

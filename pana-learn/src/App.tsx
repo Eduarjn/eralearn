@@ -28,11 +28,20 @@ import { AITokenManagement } from '@/pages/AITokenManagement';
 import { CadastroTest } from '@/components/CadastroTest';
 import ResetPassword from '@/pages/ResetPassword';
 import { ImageDiagnostic } from '@/components/ImageDiagnostic';
+import GerenciarOrdemVideos from '@/pages/admin/GerenciarOrdemVideos';
+import { runDiagnostics } from '@/utils/debug-env';
 // import AIModulePage from '@/pages/admin/ai';
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  // Executar diagnóstico em desenvolvimento
+  if (import.meta.env.DEV) {
+    console.log('🔍 Modo desenvolvimento detectado - executando diagnóstico...');
+    runDiagnostics();
+  }
+
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -138,6 +147,14 @@ const App = () => (
                   } 
                 />
                 <Route 
+                  path="/admin/gerenciar-ordem-videos/:cursoId" 
+                  element={
+                    <ProtectedRoute>
+                      <GerenciarOrdemVideos />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
                   path="/ai-tokens" 
                   element={
                     <ProtectedRoute>
@@ -163,6 +180,7 @@ const App = () => (
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
-);
+  );
+};
 
 export default App;

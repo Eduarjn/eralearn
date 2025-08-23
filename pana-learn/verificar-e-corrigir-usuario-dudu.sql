@@ -247,3 +247,7 @@ BEGIN
   RAISE NOTICE 'Teste fazer login com as credenciais corretas.';
 END $$;
 
+
+
+
+

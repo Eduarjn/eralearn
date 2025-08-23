@@ -35,7 +35,8 @@ export default function ClienteCursoDetalhe() {
       const { data: videosData } = await supabase
         .from('videos')
         .select('*')
-        .in('modulo_id', moduloIds);
+        .in('modulo_id', moduloIds)
+        .order('ordem', { ascending: true });
 
       // Agrupar vídeos por módulo
       const agrupado = {};
@@ -130,8 +131,37 @@ export default function ClienteCursoDetalhe() {
                 <video width="100%" height="480" src={videoSelecionado.url_video} controls style={{ display: 'block', width: '100%' }} />
               )}
             </div>
-            <h1 style={{ fontSize: 26, fontWeight: 'bold', marginBottom: 8 }}>{videoSelecionado.titulo}</h1>
-            <p style={{ color: '#666', marginBottom: 16, fontSize: 16 }}>{videoSelecionado.descricao}</p>
+            
+            {/* Informações do Vídeo */}
+            <div style={{ marginBottom: 24 }}>
+              <h1 style={{ fontSize: 28, fontWeight: 'bold', marginBottom: 12, color: '#1f2937' }}>
+                {videoSelecionado.titulo}
+              </h1>
+              {videoSelecionado.descricao && (
+                <p style={{ color: '#6b7280', fontSize: 16, lineHeight: 1.6, marginBottom: 16 }}>
+                  {videoSelecionado.descricao}
+                </p>
+              )}
+              
+              {/* Status do Vídeo */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingTop: 16, borderTop: '1px solid #e5e7eb' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ color: '#9ca3af', fontSize: 14 }}>⏱️</span>
+                  <span style={{ color: '#6b7280', fontSize: 14 }}>
+                    {videoSelecionado.duracao ? `${Math.round(videoSelecionado.duracao / 60)} min` : 'Duração não definida'}
+                  </span>
+                </div>
+                
+                {progresso[videoSelecionado.id] && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 8, height: 8, backgroundColor: '#10b981', borderRadius: '50%' }}></div>
+                    <span style={{ color: '#10b981', fontSize: 14, fontWeight: 500 }}>
+                      Assistido
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
           </>
         ) : (
           <p>Selecione um vídeo</p>

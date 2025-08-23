@@ -70,3 +70,7 @@ SELECT '✅ PRONTO! Agora recarregue a plataforma e teste!' as final;
 
 
 
+
+
+
+
