@@ -173,7 +173,7 @@ export function AuthForm() {
           }`}
           style={{
             backgroundImage: backgroundLoaded 
-              ? `url(${resolveBackgroundPath(branding.background_url)})`
+              ? `url(https://eralearn-94hi.vercel.app/lovable-uploads/aafcc16a-d43c-4f66-9fa4-70da46d38ccb.png)`
               : undefined
           }}
         >
