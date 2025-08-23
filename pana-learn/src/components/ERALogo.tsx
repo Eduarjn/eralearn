@@ -78,7 +78,7 @@ export const ERALogo: React.FC<ERALogoProps> = ({
   };
 
   // Logo principal da ERA Learn
-  const logoSrc = resolveLogoPath(branding.logo_url);
+  const logoSrc = resolveLogoPath(branding.logo_url || '/logotipoeralearn.png');
 
   if (variant === 'icon') {
     return (

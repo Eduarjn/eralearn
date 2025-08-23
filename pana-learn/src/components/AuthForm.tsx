@@ -187,7 +187,7 @@ export function AuthForm() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <img 
-              src={resolveLogoPath(branding.logo_url)} 
+              src={resolveLogoPath(branding.logo_url || '/logotipoeralearn.png')} 
               alt="ERA Learn Logo" 
               id="login-logo"
               className="w-full h-32 lg:h-40 object-contain logo-rounded cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg"
@@ -218,7 +218,7 @@ export function AuthForm() {
                 }
               }}
               onLoad={() => {
-                console.log('✅ Logo carregado com sucesso:', resolveLogoPath(branding.logo_url));
+                console.log('✅ Logo carregado com sucesso:', resolveLogoPath(branding.logo_url || '/logotipoeralearn.png'));
               }}
               title="Clique para visitar o site ERA"
             />
