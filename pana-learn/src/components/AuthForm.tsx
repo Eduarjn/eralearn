@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useBranding } from '../context/BrandingContext';
 import { resolveLogoPath, resolveBackgroundPath, imageFallbacks } from '@/utils/imageUtils';
-import { ImageDebugger } from './ImageDebugger';
+import { getVercelImageUrl, VERCEL_IMAGES } from '@/utils/vercelImageUtils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -186,11 +186,30 @@ export function AuthForm() {
         {/* Logo e título */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <ImageDebugger
-              imagePath={branding.logo_url || '/logotipoeralearn.png'}
-              alt="ERA Learn Logo"
+            <img 
+              src="https://eralearn-94hi.vercel.app/logotipoeralearn.png" 
+              alt="ERA Learn Logo" 
+              id="login-logo"
               className="w-full h-32 lg:h-40 object-contain logo-rounded cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg"
-              fallbackPath="/logotipoeralearn.png"
+              style={{ 
+                borderRadius: '12px',
+                borderTopLeftRadius: '12px',
+                borderTopRightRadius: '12px',
+                borderBottomLeftRadius: '12px',
+                borderBottomRightRadius: '12px'
+              }}
+              onClick={() => {
+                window.open('https://era.com.br/', '_blank');
+              }}
+              onError={(e) => {
+                console.error('❌ Erro ao carregar logo:', e);
+                // Tentar fallback local
+                e.currentTarget.src = "/logotipoeralearn.png";
+              }}
+              onLoad={() => {
+                console.log('✅ Logo carregado com sucesso');
+              }}
+              title="Clique para visitar o site ERA"
             />
           </div>
           <p className="text-white/80 text-sm">Plataforma de Ensino Online</p>
