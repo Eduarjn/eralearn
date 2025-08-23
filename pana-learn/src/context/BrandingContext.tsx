@@ -26,10 +26,10 @@ interface BrandingContextType {
 }
 
 const defaultBranding: BrandingConfig = {
-  logo_url: 'https://eralearn-94hi.vercel.app/logotipoeralearn.png',
+  logo_url: '/logotipoeralearn.png',
   sub_logo_url: '/era-sub-logo.png',
-  favicon_url: 'https://eralearn-94hi.vercel.app/favicon.ico',
-  background_url: 'https://eralearn-94hi.vercel.app/lovable-uploads/aafcc16a-d43c-4f66-9fa4-70da46d38ccb.png',
+  favicon_url: '/favicon.ico',
+  background_url: '/lovable-uploads/aafcc16a-d43c-4f66-9fa4-70da46d38ccb.png',
   primary_color: '#CCFF00',
   secondary_color: '#232323',
   company_name: 'ERA Learn',

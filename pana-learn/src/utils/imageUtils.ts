@@ -97,8 +97,14 @@ export const testImageLoad = (url: string): Promise<boolean> => {
     }
 
     const img = new Image();
-    img.onload = () => resolve(true);
-    img.onerror = () => resolve(false);
+    img.onload = () => {
+      console.log('✅ Imagem carregada com sucesso:', url);
+      resolve(true);
+    };
+    img.onerror = () => {
+      console.error('❌ Erro ao carregar imagem:', url);
+      resolve(false);
+    };
     img.src = url;
   });
 };

@@ -173,7 +173,7 @@ export function AuthForm() {
           }`}
           style={{
             backgroundImage: backgroundLoaded 
-              ? `url(https://eralearn-94hi.vercel.app/lovable-uploads/aafcc16a-d43c-4f66-9fa4-70da46d38ccb.png)`
+              ? `url(${resolveBackgroundPath(branding.background_url)})`
               : undefined
           }}
         >
@@ -187,7 +187,7 @@ export function AuthForm() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <img 
-              src="https://eralearn-94hi.vercel.app/logotipoeralearn.png" 
+              src={resolveLogoPath(branding.logo_url)} 
               alt="ERA Learn Logo" 
               id="login-logo"
               className="w-full h-32 lg:h-40 object-contain logo-rounded cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg"
@@ -203,11 +203,22 @@ export function AuthForm() {
               }}
               onError={(e) => {
                 console.error('❌ Erro ao carregar logo:', e);
-                // Tentar fallback local
-                e.currentTarget.src = "/logotipoeralearn.png";
+                // Tentar fallbacks
+                const currentSrc = e.currentTarget.src;
+                const fallbackIndex = imageFallbacks.logo.findIndex(fallback => 
+                  currentSrc.includes(fallback)
+                );
+                
+                if (fallbackIndex < imageFallbacks.logo.length - 1) {
+                  const nextFallback = imageFallbacks.logo[fallbackIndex + 1];
+                  console.log(`🔄 Tentando fallback: ${nextFallback}`);
+                  e.currentTarget.src = resolveLogoPath(nextFallback);
+                } else {
+                  console.error('❌ Todos os fallbacks falharam');
+                }
               }}
               onLoad={() => {
-                console.log('✅ Logo carregado com sucesso');
+                console.log('✅ Logo carregado com sucesso:', resolveLogoPath(branding.logo_url));
               }}
               title="Clique para visitar o site ERA"
             />
