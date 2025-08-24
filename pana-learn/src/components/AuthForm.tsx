@@ -203,18 +203,12 @@ export function AuthForm() {
               }}
               onError={(e) => {
                 console.error('❌ Erro ao carregar logo:', e);
-                // Tentar fallbacks
-                const currentSrc = e.currentTarget.src;
-                const fallbackIndex = imageFallbacks.logo.findIndex(fallback => 
-                  currentSrc.includes(fallback)
-                );
-                
-                if (fallbackIndex < imageFallbacks.logo.length - 1) {
-                  const nextFallback = imageFallbacks.logo[fallbackIndex + 1];
-                  console.log(`🔄 Tentando fallback: ${nextFallback}`);
-                  e.currentTarget.src = resolveLogoPath(nextFallback);
+                // Evitar loop infinito - usar fallback simples
+                if (!e.currentTarget.src.includes('/placeholder.svg')) {
+                  console.log('🔄 Usando fallback placeholder');
+                  e.currentTarget.src = '/placeholder.svg';
                 } else {
-                  console.error('❌ Todos os fallbacks falharam');
+                  console.error('❌ Fallback também falhou');
                 }
               }}
               onLoad={() => {
