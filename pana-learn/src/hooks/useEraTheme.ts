@@ -107,13 +107,11 @@ export function EraThemeToggle() {
   return (
     <button
       onClick={toggleEraTheme}
-      className={`
-        px-3 py-2 rounded-md text-sm font-medium transition-colors
-        ${isEraTheme 
+      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+        isEraTheme 
           ? 'bg-brand-primary text-brand-primary-foreground hover:bg-brand-primary/90' 
           : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-        }
-      `}
+      }`}
       title={isEraTheme ? 'Desativar tema ERA' : 'Ativar tema ERA'}
     >
       {isEraTheme ? '🎨 ERA' : '🎨 Padrão'}
