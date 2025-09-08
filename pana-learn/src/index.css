@@ -1,9 +1,12 @@
+/* Importar tokens futuristas */
+@import './lib/ui/tokens.css';
+
+/* Importar tokens do tema ERA */
+@import './styles/tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Importar tokens futuristas */
-@import './lib/ui/tokens.css';
 
 /* Classes personalizadas para efeitos de sombra */
 @layer utilities {

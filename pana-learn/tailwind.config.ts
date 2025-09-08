@@ -19,6 +19,10 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ['var(--font-sans)'],
+				heading: ['var(--font-heading)'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -63,7 +67,18 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// ERA color palette
+				// ERA Theme Brand Colors (usando tokens CSS)
+				brand: {
+					primary: "rgb(var(--brand-primary) / <alpha-value>)",
+					dark: "rgb(var(--brand-dark) / <alpha-value>)",
+					muted: "rgb(var(--brand-muted) / <alpha-value>)",
+					sand: "rgb(var(--brand-sand) / <alpha-value>)",
+					'primary-foreground': "rgb(var(--brand-primary-foreground) / <alpha-value>)",
+					'dark-foreground': "rgb(var(--brand-dark-foreground) / <alpha-value>)",
+					'muted-foreground': "rgb(var(--brand-muted-foreground) / <alpha-value>)",
+					'sand-foreground': "rgb(var(--brand-sand-foreground) / <alpha-value>)",
+				},
+				// ERA color palette (mantido para compatibilidade)
 				'era-white': '#FFFFFF',
 				'era-black': '#000000',
 				'era-green': '#34C759',
