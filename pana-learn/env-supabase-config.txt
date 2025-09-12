@@ -1,0 +1,31 @@
+# Configuração Supabase - Adicione ao seu .env.local
+
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://oqoxhavdhrgdjvxvajze.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9xb3hoYXZkaHJnZGp2eHZhanplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxNzg3NTQsImV4cCI6MjA2NTc1NDc1NH0.m5r7W5hzL1x8pA0nqRQXRpFLTqM1sUIJuSCh00uFRgM
+
+# Service Role Key (NUNCA expor no client - apenas server)
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+
+# JWT Secret para validação manual se necessário
+SUPABASE_JWT_SECRET=your_jwt_secret_here
+
+# Feature Flag para Storage Provider
+STORAGE_PROVIDER=supabase
+
+# Supabase Storage Configuration
+SUPABASE_STORAGE_BUCKET=videos
+
+# App Mode (supabase | standalone | local)
+VITE_APP_MODE=supabase
+
+
+
+
+
+
+
+
+
+
+

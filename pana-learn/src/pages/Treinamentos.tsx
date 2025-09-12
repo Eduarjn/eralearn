@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Filter, Plus, Video, Eye, Download, Youtube, Trash, BookOpen, Clock, Users, TrendingUp, Star, Award, Zap, ArrowLeft, Settings, ListOrdered } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { Dialog } from '@/components/ui/dialog';
 import type { Database } from '@/integrations/supabase/types';

@@ -93,3 +93,23 @@ SELECT '5. Se ainda houver erro, verifique a estrutura da tabela usuarios' as in
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

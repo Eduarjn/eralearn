@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, ButtonProps } from '@/components/ui/button';
-import { useEraTheme } from '@/hooks/useEraTheme';
+import { useEraTheme } from '@/hooks/useEraThemeSimple';
 import { cn } from '@/lib/utils';
 
 interface EraThemedButtonProps extends ButtonProps {

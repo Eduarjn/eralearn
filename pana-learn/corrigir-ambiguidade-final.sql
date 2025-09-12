@@ -69,3 +69,23 @@ RETURNING id, video_id, usuario_id, texto;
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

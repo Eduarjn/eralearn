@@ -132,3 +132,9 @@ O tema ERA foi desenvolvido com foco em acessibilidade:
 - **Contraste de títulos:** 3:1
 - **Cores de contraste:** Automáticas para cada cor de fundo
 - **Fontes legíveis:** Inter e Manrope são otimizadas para leitura
+
+
+
+
+
+

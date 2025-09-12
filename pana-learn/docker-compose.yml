@@ -12,10 +12,33 @@ services:
       - "3000:80"
     environment:
       - NODE_ENV=production
+      - VITE_VIDEO_UPLOAD_TARGET=${VIDEO_UPLOAD_TARGET:-supabase}
+      - VITE_VIDEO_MAX_UPLOAD_MB=${VIDEO_MAX_UPLOAD_MB:-1024}
     volumes:
       - ./logs:/var/log/nginx
+      - ./videos:/var/www/videos
     networks:
       - eralearn-network
+
+  # Servidor de upload local (opcional)
+  upload-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: eralearn-upload-server
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - VIDEO_LOCAL_DIR=/var/www/videos
+      - VIDEO_PUBLIC_BASE=/media/videos
+      - VIDEO_MAX_UPLOAD_MB=${VIDEO_MAX_UPLOAD_MB:-1024}
+    volumes:
+      - ./videos:/var/www/videos
+    networks:
+      - eralearn-network
+    profiles:
+      - upload-local
 
   # Nginx como proxy reverso (opcional)
   nginx:

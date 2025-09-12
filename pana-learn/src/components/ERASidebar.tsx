@@ -244,7 +244,7 @@ export function ERASidebar() {
       {/* Logo ERA Learn */}
       <div className="relative">
         <img
-          src="https://eralearn-94hi.vercel.app/logotipoeralearn.png"
+          src="/logotipoeralearn.png"
           alt="ERA Learn Logo"
           id="sidebar-logo"
           className={`object-contain logo-rounded cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg ${
@@ -270,8 +270,8 @@ export function ERASidebar() {
               e.currentTarget.src = resolveLogoPath(nextFallback);
             } else {
               console.error('❌ Todos os fallbacks falharam');
-              // Último recurso: usar URL absoluta do Vercel
-              e.currentTarget.src = "https://eralearn-94hi.vercel.app/logotipoeralearn.png";
+              // Último recurso: usar placeholder
+              e.currentTarget.src = "/placeholder.svg";
             }
           }}
           onLoad={() => {

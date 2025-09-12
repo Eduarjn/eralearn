@@ -38,11 +38,11 @@ export function AuthForm() {
       };
       img.onerror = (e) => {
         console.error('❌ Erro ao carregar imagem de fundo, usando fallback', e);
-        console.error('URL da imagem:', resolveBackgroundPath(branding.background_url));
+        console.error('URL da imagem:', '/lovable-uploads/aafcc16a-d43c-4f66-9fa4-70da46d38ccb.png');
         console.error('Ambiente:', window.location.hostname);
         setBackgroundLoaded(false);
       };
-      img.src = resolveBackgroundPath(branding.background_url);
+      img.src = '/lovable-uploads/aafcc16a-d43c-4f66-9fa4-70da46d38ccb.png';
     };
 
     testBackgroundImage();
@@ -173,7 +173,7 @@ export function AuthForm() {
           }`}
           style={{
             backgroundImage: backgroundLoaded 
-              ? `url(https://eralearn-94hi.vercel.app/lovable-uploads/aafcc16a-d43c-4f66-9fa4-70da46d38ccb.png)`
+              ? `url(/lovable-uploads/aafcc16a-d43c-4f66-9fa4-70da46d38ccb.png)`
               : undefined
           }}
         >
@@ -187,7 +187,7 @@ export function AuthForm() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <img 
-              src="https://eralearn-94hi.vercel.app/logotipoeralearn.png" 
+              src="/logotipoeralearn.png" 
               alt="ERA Learn Logo" 
               id="login-logo"
               className="w-full h-32 lg:h-40 object-contain logo-rounded cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg"
@@ -203,16 +203,20 @@ export function AuthForm() {
               }}
               onError={(e) => {
                 console.error('❌ Erro ao carregar logo:', e);
-                // Evitar loop infinito - usar fallback simples
-                if (!e.currentTarget.src.includes('/placeholder.svg')) {
-                  console.log('🔄 Usando fallback placeholder');
+                // Tentar fallbacks em ordem
+                const currentSrc = e.currentTarget.src;
+                if (currentSrc.includes('/logotipoeralearn.png')) {
+                  console.log('🔄 Tentando fallback SVG');
+                  e.currentTarget.src = '/logotipoeralearn.svg';
+                } else if (currentSrc.includes('/logotipoeralearn.svg')) {
+                  console.log('🔄 Usando placeholder');
                   e.currentTarget.src = '/placeholder.svg';
                 } else {
-                  console.error('❌ Fallback também falhou');
+                  console.error('❌ Todos os fallbacks falharam');
                 }
               }}
               onLoad={() => {
-                console.log('✅ Logo carregado com sucesso: https://eralearn-94hi.vercel.app/logotipoeralearn.png');
+                console.log('✅ Logo carregado com sucesso:', e.currentTarget.src);
               }}
               title="Clique para visitar o site ERA"
             />

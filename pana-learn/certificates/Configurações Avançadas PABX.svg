@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .title { font-family: 'Arial', sans-serif; font-size: 24px; font-weight: bold; fill: #2c3e50; }
+      .subtitle { font-family: 'Arial', sans-serif; font-size: 18px; fill: #34495e; }
+      .name { font-family: 'Arial', sans-serif; font-size: 20px; font-weight: bold; fill: #e74c3c; }
+      .course { font-family: 'Arial', sans-serif; font-size: 16px; fill: #2c3e50; }
+      .date { font-family: 'Arial', sans-serif; font-size: 14px; fill: #7f8c8d; }
+      .hours { font-family: 'Arial', sans-serif; font-size: 14px; fill: #7f8c8d; }
+      .cert-id { font-family: 'Arial', sans-serif; font-size: 12px; fill: #95a5a6; }
+    </style>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="800" height="600" fill="#ffffff" stroke="#bdc3c7" stroke-width="2"/>
+  
+  <!-- Header -->
+  <rect x="50" y="50" width="700" height="100" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="400" y="90" text-anchor="middle" class="title">CERTIFICADO DE CONCLUSÃO</text>
+  <text x="400" y="115" text-anchor="middle" class="subtitle">Configurações Avançadas PABX</text>
+  
+  <!-- Content -->
+  <text x="400" y="200" text-anchor="middle" class="subtitle">Certificamos que</text>
+  <text x="400" y="240" text-anchor="middle" class="name">{{NOME_COMPLETO}}</text>
+  <text x="400" y="280" text-anchor="middle" class="course">concluiu com sucesso o curso</text>
+  <text x="400" y="320" text-anchor="middle" class="course">{{CURSO}}</text>
+  
+  <!-- Details -->
+  <text x="200" y="380" class="date">Data de Conclusão: {{DATA_CONCLUSAO}}</text>
+  <text x="200" y="410" class="hours">Carga Horária: {{CARGA_HORARIA}}</text>
+  <text x="200" y="440" class="cert-id">Certificado ID: {{CERT_ID}}</text>
+  
+  <!-- QR Code placeholder -->
+  <rect x="600" y="350" width="100" height="100" fill="#f8f9fa" stroke="#dee2e6" stroke-width="1"/>
+  <text x="650" y="400" text-anchor="middle" class="cert-id">QR Code</text>
+  <text x="650" y="420" text-anchor="middle" class="cert-id">{{QR_URL}}</text>
+  
+  <!-- Footer -->
+  <text x="400" y="550" text-anchor="middle" class="date">ERA Learn - Plataforma de Ensino Online</text>
+</svg>
+
+
+
+
+

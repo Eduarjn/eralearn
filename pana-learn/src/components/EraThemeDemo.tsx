@@ -1,9 +1,8 @@
 import React from 'react';
-import { EraThemeToggle } from '@/hooks/useEraTheme';
+import { EraThemeToggle, useEraTheme } from '@/hooks/useEraThemeSimple';
 import { EraThemedButton } from './EraThemedButton';
 import { EraThemedCard } from './EraThemedCard';
 import { EraThemedInput } from './EraThemedInput';
-import { useEraTheme } from '@/hooks/useEraTheme';
 
 /**
  * Componente de demonstração do sistema de temas ERA

@@ -232,7 +232,7 @@
 
 @media (min-width: 1024px) {
   .sidebar-content {
-    margin-left: 256px; /* 64 * 4 = 256px (w-64) */
+    margin-left: 0; /* Removido para eliminar a faixa preta */
   }
 }
 

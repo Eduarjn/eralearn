@@ -1,7 +1,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useEraTheme } from '@/hooks/useEraTheme';
+import { useEraTheme } from '@/hooks/useEraThemeSimple';
 import { cn } from '@/lib/utils';
 
 interface EraThemedInputProps extends React.InputHTMLAttributes<HTMLInputElement> {

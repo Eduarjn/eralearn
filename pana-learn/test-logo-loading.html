@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Carregamento do Logo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .logo-test {
+            border: 2px solid #ddd;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+        .success { border-color: #4CAF50; background-color: #f1f8e9; }
+        .error { border-color: #f44336; background-color: #ffebee; }
+        .loading { border-color: #ff9800; background-color: #fff3e0; }
+        img {
+            max-width: 200px;
+            max-height: 100px;
+            object-fit: contain;
+        }
+        .status {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .success .status { color: #4CAF50; }
+        .error .status { color: #f44336; }
+        .loading .status { color: #ff9800; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Teste de Carregamento do Logo ERA Learn</h1>
+    
+    <div class="test-container">
+        <h2>Teste 1: Logo PNG</h2>
+        <div class="logo-test loading" id="test1">
+            <img src="/logotipoeralearn.png" alt="Logo PNG" onload="testSuccess('test1')" onerror="testError('test1')">
+            <div class="status">Carregando...</div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Teste 2: Logo SVG</h2>
+        <div class="logo-test loading" id="test2">
+            <img src="/logotipoeralearn.svg" alt="Logo SVG" onload="testSuccess('test2')" onerror="testError('test2')">
+            <div class="status">Carregando...</div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Teste 3: Imagem de Fundo</h2>
+        <div class="logo-test loading" id="test3">
+            <img src="/lovable-uploads/aafcc16a-d43c-4f66-9fa4-70da46d38ccb.png" alt="Background" onload="testSuccess('test3')" onerror="testError('test3')">
+            <div class="status">Carregando...</div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Teste 4: Placeholder</h2>
+        <div class="logo-test loading" id="test4">
+            <img src="/placeholder.svg" alt="Placeholder" onload="testSuccess('test4')" onerror="testError('test4')">
+            <div class="status">Carregando...</div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>📊 Resumo dos Testes</h2>
+        <div id="summary">
+            <p>Executando testes...</p>
+        </div>
+    </div>
+
+    <script>
+        let testResults = {
+            test1: false,
+            test2: false,
+            test3: false,
+            test4: false
+        };
+
+        function testSuccess(testId) {
+            const element = document.getElementById(testId);
+            element.className = 'logo-test success';
+            element.querySelector('.status').textContent = '✅ Carregado com sucesso!';
+            testResults[testId] = true;
+            updateSummary();
+        }
+
+        function testError(testId) {
+            const element = document.getElementById(testId);
+            element.className = 'logo-test error';
+            element.querySelector('.status').textContent = '❌ Erro ao carregar';
+            testResults[testId] = false;
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const summary = document.getElementById('summary');
+            const total = Object.keys(testResults).length;
+            const passed = Object.values(testResults).filter(Boolean).length;
+            const failed = total - passed;
+
+            summary.innerHTML = `
+                <p><strong>Total de testes:</strong> ${total}</p>
+                <p><strong>✅ Sucessos:</strong> ${passed}</p>
+                <p><strong>❌ Falhas:</strong> ${failed}</p>
+                <p><strong>📈 Taxa de sucesso:</strong> ${Math.round((passed/total)*100)}%</p>
+                ${failed === 0 ? '<p style="color: #4CAF50; font-weight: bold;">🎉 Todos os testes passaram!</p>' : '<p style="color: #f44336; font-weight: bold;">⚠️ Alguns testes falharam. Verifique os arquivos.</p>'}
+            `;
+        }
+
+        // Timeout para testes que não respondem
+        setTimeout(() => {
+            Object.keys(testResults).forEach(testId => {
+                const element = document.getElementById(testId);
+                if (element.className.includes('loading')) {
+                    testError(testId);
+                }
+            });
+        }, 5000);
+    </script>
+</body>
+</html>
+
+
+
+
+

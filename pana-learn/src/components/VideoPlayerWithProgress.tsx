@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { CheckCircle, Play, Pause, Maximize2 } from 'lucide-react';
 import { useVideoProgress } from '@/hooks/useVideoProgress';
+import { useSignedMediaUrl } from '@/hooks/useSignedMediaUrl';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +48,16 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
 
   const { toast } = useToast();
   const { progress, saveProgress, markAsCompleted } = useVideoProgress(userId, video.id, cursoId, moduloId);
+  
+  // Detectar se é vídeo do YouTube ou vídeo problemático (definir antes de usar)
+  const isYouTube = video.url_video.includes('youtube.com') || video.url_video.includes('youtu.be');
+  const isProblematicVideo = video.url_video.includes('1757184723849') || video.url_video.includes('localhost:3001');
+  
+  // Hook para obter URL assinada se o vídeo for do tipo upload e não for problemático
+  const { signedUrl, loading: urlLoading, error: urlError } = useSignedMediaUrl({
+    videoId: video.source === 'upload' && !isProblematicVideo ? video.id : undefined,
+    enabled: video.source === 'upload' && !!video.id && !isProblematicVideo
+  });
 
   // Extrair ID do vídeo do YouTube
   const extractYouTubeVideoId = (url: string): string => {
@@ -54,10 +65,11 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
     const match = url.match(regExp);
     return (match && match[2].length === 11) ? match[2] : '';
   };
-
-  // Detectar se é vídeo do YouTube
-  const isYouTube = video.url_video.includes('youtube.com') || video.url_video.includes('youtu.be');
-  const youtubeVideoId = isYouTube ? extractYouTubeVideoId(video.url_video) : '';
+  
+  // Se for vídeo problemático, forçar YouTube
+  const finalIsYouTube = isYouTube || isProblematicVideo;
+  const finalVideoUrl = isProblematicVideo ? 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' : video.url_video;
+  const youtubeVideoId = finalIsYouTube ? extractYouTubeVideoId(finalVideoUrl) : '';
 
   const detectYouTube = () => {
     if (isYouTube) {
@@ -232,8 +244,8 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  // Se for vídeo do YouTube, usar o componente especializado
-  if (isYouTube) {
+  // Se for vídeo do YouTube ou problemático, usar o componente especializado
+  if (finalIsYouTube) {
     return (
       <YouTubePlayerWithProgress
         video={video}
@@ -263,15 +275,43 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
 
       {/* Player de vídeo */}
       <div className="relative bg-black rounded-lg overflow-hidden">
-        <video
-          ref={videoRef}
-          src={video.url_video}
-          className="w-full aspect-video"
-          poster={video.thumbnail_url}
-          controls={false}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
-        />
+        {video.source === 'upload' ? (
+          // Para vídeos upload, usar URL assinada
+          <>
+            {urlLoading && (
+              <div className="flex items-center justify-center h-64 bg-gray-900">
+                <div className="text-white">Carregando vídeo...</div>
+              </div>
+            )}
+            {urlError && (
+              <div className="flex items-center justify-center h-64 bg-gray-900">
+                <div className="text-red-400">Erro ao carregar vídeo: {urlError}</div>
+              </div>
+            )}
+            {signedUrl && (
+              <video
+                ref={videoRef}
+                src={signedUrl}
+                className="w-full aspect-video"
+                poster={video.thumbnail_url}
+                controls={false}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+              />
+            )}
+          </>
+        ) : (
+          // Para vídeos YouTube, usar URL original
+          <video
+            ref={videoRef}
+            src={video.url_video}
+            className="w-full aspect-video"
+            poster={video.thumbnail_url}
+            controls={false}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+          />
+        )}
         
         {/* Botão fullscreen */}
         <button

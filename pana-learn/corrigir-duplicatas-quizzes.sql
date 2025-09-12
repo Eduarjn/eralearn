@@ -163,3 +163,23 @@ SELECT '✅ Mapeamento verificado' as correcao;
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
