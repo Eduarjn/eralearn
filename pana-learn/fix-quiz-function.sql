@@ -169,3 +169,4 @@ SELECT 'A função liberar_quiz_curso foi corrigida e deve funcionar agora.' as 
 
 
 
+

@@ -19,4 +19,37 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    force: true,
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      '@supabase/supabase-js',
+      'lucide-react',
+      'class-variance-authority',
+      'clsx',
+      'tailwind-merge',
+      'sonner',
+      'next-themes',
+      'react-beautiful-dnd',
+      '@radix-ui/react-dropdown-menu'
+    ],
+    exclude: [
+      'lovable-tagger'
+    ]
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          supabase: ['@supabase/supabase-js'],
+          ui: ['lucide-react', 'class-variance-authority', 'clsx', 'tailwind-merge'],
+          radix: ['@radix-ui/react-dropdown-menu']
+        }
+      }
+    }
+  }
 }));

@@ -1,0 +1,89 @@
+# ========================================
+# Docker Compose para Produção - ERA Learn
+# ========================================
+
+version: '3.8'
+
+services:
+  # Aplicação principal
+  eralearn:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: eralearn-app
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    volumes:
+      - ./data:/usr/share/nginx/html/data
+      - ./logs:/var/log/nginx
+    environment:
+      - NODE_ENV=production
+      - VITE_APP_MODE=production
+    networks:
+      - eralearn-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Proxy reverso Nginx
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: eralearn-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./logs:/var/log/nginx
+    depends_on:
+      eralearn:
+        condition: service_healthy
+    networks:
+      - eralearn-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Monitoramento (opcional)
+  watchtower:
+    image: containrrr/watchtower
+    container_name: eralearn-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=3600
+      - WATCHTOWER_INCLUDE_STOPPED=true
+    networks:
+      - eralearn-network
+    profiles:
+      - monitoring
+
+networks:
+  eralearn-network:
+    driver: bridge
+    name: eralearn-network
+
+volumes:
+  data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data
+  logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./logs

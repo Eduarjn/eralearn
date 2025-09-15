@@ -182,3 +182,4 @@ GRANT EXECUTE ON FUNCTION update_branding_config(TEXT, TEXT, TEXT, TEXT, TEXT, T
 
 
 
+

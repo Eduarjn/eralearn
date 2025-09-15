@@ -1,21 +1,24 @@
-# 🚀 **Guia de Instalação em Servidor - ERA Learn**
+# 🚀 Guia de Instalação ERA Learn no Servidor
 
-## 📋 **Pré-requisitos**
+Este guia completo te ajudará a instalar e configurar a plataforma ERA Learn em um servidor de produção.
 
-### **🖥️ Servidor:**
-- **Sistema Operacional:** Ubuntu 20.04+ / CentOS 8+ / Debian 11+
-- **RAM:** Mínimo 2GB (Recomendado: 4GB+)
-- **CPU:** 2 cores (Recomendado: 4 cores+)
-- **Disco:** 20GB+ de espaço livre
-- **Rede:** Acesso à internet para downloads
+## 📋 Pré-requisitos do Servidor
 
-### **🌐 Domínio (Opcional):**
-- Domínio configurado (ex: `eralearn.com`)
-- Certificado SSL (Let's Encrypt gratuito)
+### Especificações Mínimas Recomendadas:
+- **CPU**: 2 cores ou mais
+- **RAM**: 4GB ou mais (8GB recomendado)
+- **Disco**: 50GB SSD ou mais
+- **Sistema**: Ubuntu 20.04 LTS ou superior / CentOS 8+ / Debian 11+
 
-## 🔧 **1. Preparação do Servidor**
+### Software Necessário:
+- Docker e Docker Compose
+- Nginx (proxy reverso)
+- Certificado SSL (Let's Encrypt)
+- Git
 
-### **✅ Atualizar Sistema:**
+## 🔧 Passo 1: Preparação do Servidor
+
+### 1.1 Atualizar o Sistema
 ```bash
 # Ubuntu/Debian
 sudo apt update && sudo apt upgrade -y
@@ -24,150 +27,196 @@ sudo apt update && sudo apt upgrade -y
 sudo yum update -y
 ```
 
-### **✅ Instalar Dependências Básicas:**
+### 1.2 Instalar Dependências Básicas
 ```bash
 # Ubuntu/Debian
-sudo apt install -y curl wget git unzip build-essential
+sudo apt install -y curl wget git unzip software-properties-common apt-transport-https ca-certificates gnupg lsb-release
 
 # CentOS/RHEL
-sudo yum install -y curl wget git unzip gcc gcc-c++ make
+sudo yum install -y curl wget git unzip yum-utils
 ```
 
-## 🐳 **2. Instalar Docker e Docker Compose**
-
-### **✅ Instalar Docker:**
+### 1.3 Instalar Docker
 ```bash
-# Baixar script de instalação
+# Ubuntu/Debian
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
-
-# Adicionar usuário ao grupo docker
 sudo usermod -aG docker $USER
 
-# Iniciar e habilitar Docker
-sudo systemctl start docker
-sudo systemctl enable docker
-
-# Verificar instalação
-docker --version
-```
-
-### **✅ Instalar Docker Compose:**
-```bash
-# Baixar Docker Compose
+# Instalar Docker Compose
 sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-
-# Dar permissão de execução
 sudo chmod +x /usr/local/bin/docker-compose
 
 # Verificar instalação
+docker --version
 docker-compose --version
 ```
 
-## 🗄️ **3. Configurar Banco de Dados (Supabase)**
-
-### **✅ Opção 1: Supabase Cloud (Recomendado)**
-1. Acesse [supabase.com](https://supabase.com)
-2. Crie uma conta e novo projeto
-3. Configure as variáveis de ambiente
-
-### **✅ Opção 2: Supabase Self-Hosted**
-```bash
-# Clonar Supabase
-git clone https://github.com/supabase/supabase
-cd supabase
-
-# Configurar variáveis
-cp .env.example .env
-nano .env
-
-# Iniciar Supabase
-docker-compose up -d
-```
-
-## 📦 **4. Deploy da Aplicação**
-
-### **✅ Clonar Repositório:**
-```bash
-# Clonar o projeto
-git clone https://github.com/seu-usuario/eralearn.git
-cd eralearn/pana-learn
-
-# Verificar estrutura
-ls -la
-```
-
-### **✅ Configurar Variáveis de Ambiente:**
-```bash
-# Copiar arquivo de exemplo
-cp .env.example .env
-
-# Editar configurações
-nano .env
-```
-
-**Conteúdo do `.env`:**
-```env
-# Supabase Configuration
-VITE_SUPABASE_URL=https://seu-projeto.supabase.co
-VITE_SUPABASE_ANON_KEY=sua-chave-anonima
-
-# Application Configuration
-VITE_APP_NAME=ERA Learn
-VITE_APP_VERSION=1.0.0
-VITE_APP_ENV=production
-
-# Optional: Analytics
-VITE_GOOGLE_ANALYTICS_ID=GA_MEASUREMENT_ID
-```
-
-### **✅ Instalar Dependências:**
-```bash
-# Instalar Node.js (se não estiver instalado)
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# Verificar versão
-node --version
-npm --version
-
-# Instalar dependências
-npm install
-
-# Build de produção
-npm run build
-```
-
-## 🌐 **5. Configurar Nginx (Web Server)**
-
-### **✅ Instalar Nginx:**
+### 1.4 Instalar Nginx
 ```bash
 # Ubuntu/Debian
-sudo apt install nginx -y
+sudo apt install -y nginx
 
 # CentOS/RHEL
-sudo yum install nginx -y
+sudo yum install -y nginx
 
-# Iniciar e habilitar
+# Iniciar e habilitar Nginx
 sudo systemctl start nginx
 sudo systemctl enable nginx
 ```
 
-### **✅ Configurar Site:**
+## 📁 Passo 2: Preparação da Aplicação
+
+### 2.1 Criar Diretório da Aplicação
 ```bash
-# Criar configuração do site
-sudo nano /etc/nginx/sites-available/eralearn
+sudo mkdir -p /opt/eralearn
+sudo chown $USER:$USER /opt/eralearn
+cd /opt/eralearn
 ```
 
-**Conteúdo da configuração:**
-```nginx
-server {
-    listen 80;
-    server_name seu-dominio.com www.seu-dominio.com;
-    root /var/www/eralearn/dist;
-    index index.html;
+### 2.2 Clonar o Repositório
+```bash
+# Se você tem o código em um repositório Git
+git clone https://github.com/seu-usuario/eralearn.git .
 
-    # Gzip compression
+# Ou fazer upload dos arquivos via SCP/SFTP
+# scp -r ./pana-learn/* usuario@servidor:/opt/eralearn/
+```
+
+### 2.3 Configurar Variáveis de Ambiente
+```bash
+# Copiar arquivo de exemplo
+cp .env.example .env
+
+# Editar variáveis de ambiente
+nano .env
+```
+
+**Configurações importantes no .env:**
+```env
+# Modo de produção
+NODE_ENV=production
+VITE_APP_MODE=production
+
+# Supabase (se usando)
+VITE_SUPABASE_URL=https://oqoxhavdhrgdjvxvajze.supabase.co
+VITE_SUPABASE_ANON_KEY=sua_chave_aqui
+
+# Domínio
+VITE_APP_URL=https://seudominio.com
+
+# Certificados
+CERT_DATA_DIR=/opt/eralearn/data
+
+# Porta da aplicação
+PORT=3000
+```
+
+## 🐳 Passo 3: Configuração Docker
+
+### 3.1 Dockerfile de Produção
+```dockerfile
+# Dockerfile.prod
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/nginx.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+### 3.2 Docker Compose para Produção
+```yaml
+# docker-compose.prod.yml
+version: '3.8'
+
+services:
+  eralearn:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: eralearn-app
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    volumes:
+      - ./data:/opt/eralearn/data
+      - ./logs:/var/log/nginx
+    environment:
+      - NODE_ENV=production
+    networks:
+      - eralearn-network
+
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: eralearn-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./ssl:/etc/nginx/ssl
+      - ./logs:/var/log/nginx
+    depends_on:
+      - eralearn
+    networks:
+      - eralearn-network
+
+networks:
+  eralearn-network:
+    driver: bridge
+
+volumes:
+  data:
+  logs:
+```
+
+## 🌐 Passo 4: Configuração Nginx
+
+### 4.1 Configuração Principal do Nginx
+```nginx
+# nginx/nginx.conf
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections 1024;
+    use epoll;
+    multi_accept on;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # Logging
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log /var/log/nginx/access.log main;
+
+    # Performance
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    client_max_body_size 100M;
+
+    # Gzip
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
@@ -180,248 +229,307 @@ server {
     add_header Referrer-Policy "no-referrer-when-downgrade" always;
     add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
 
-    # Handle React Router
+    # Include server configurations
+    include /etc/nginx/conf.d/*.conf;
+}
+```
+
+### 4.2 Configuração do Site
+```nginx
+# nginx/conf.d/eralearn.conf
+upstream eralearn_backend {
+    server eralearn:80;
+}
+
+server {
+    listen 80;
+    server_name seudominio.com www.seudominio.com;
+    
+    # Redirect HTTP to HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name seudominio.com www.seudominio.com;
+
+    # SSL Configuration
+    ssl_certificate /etc/nginx/ssl/cert.pem;
+    ssl_certificate_key /etc/nginx/ssl/key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+
+    # Security headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # Main application
     location / {
-        try_files $uri $uri/ /index.html;
+        proxy_pass http://eralearn_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
     }
 
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+    # API routes
+    location /api/ {
+        proxy_pass http://eralearn_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+    }
+
+    # Static files
+    location /static/ {
+        alias /usr/share/nginx/html/static/;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
 
-    # API proxy (se necessário)
-    location /api/ {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
+    # Certificates
+    location /data/ {
+        alias /opt/eralearn/data/;
+        expires 1y;
+        add_header Cache-Control "public";
     }
 }
 ```
 
-### **✅ Ativar Site:**
-```bash
-# Criar link simbólico
-sudo ln -s /etc/nginx/sites-available/eralearn /etc/nginx/sites-enabled/
+## 🔒 Passo 5: Configuração SSL
 
-# Remover site padrão
-sudo rm /etc/nginx/sites-enabled/default
-
-# Testar configuração
-sudo nginx -t
-
-# Recarregar Nginx
-sudo systemctl reload nginx
-```
-
-## 📁 **6. Deploy dos Arquivos**
-
-### **✅ Copiar Build para Servidor:**
-```bash
-# Criar diretório
-sudo mkdir -p /var/www/eralearn
-
-# Copiar arquivos buildados
-sudo cp -r dist/* /var/www/eralearn/
-
-# Definir permissões
-sudo chown -R www-data:www-data /var/www/eralearn
-sudo chmod -R 755 /var/www/eralearn
-```
-
-### **✅ Verificar Instalação:**
-```bash
-# Verificar se os arquivos estão no lugar
-ls -la /var/www/eralearn/
-
-# Testar acesso
-curl -I http://localhost
-```
-
-## 🔒 **7. Configurar SSL (HTTPS)**
-
-### **✅ Instalar Certbot:**
+### 5.1 Instalar Certbot (Let's Encrypt)
 ```bash
 # Ubuntu/Debian
-sudo apt install certbot python3-certbot-nginx -y
+sudo apt install -y certbot python3-certbot-nginx
 
 # CentOS/RHEL
-sudo yum install certbot python3-certbot-nginx -y
+sudo yum install -y certbot python3-certbot-nginx
 ```
 
-### **✅ Obter Certificado SSL:**
+### 5.2 Obter Certificado SSL
 ```bash
-# Gerar certificado
-sudo certbot --nginx -d seu-dominio.com -d www.seu-dominio.com
+# Parar Nginx temporariamente
+sudo systemctl stop nginx
+
+# Obter certificado
+sudo certbot certonly --standalone -d seudominio.com -d www.seudominio.com
 
 # Configurar renovação automática
 sudo crontab -e
-# Adicionar linha: 0 12 * * * /usr/bin/certbot renew --quiet
+# Adicionar linha:
+# 0 12 * * * /usr/bin/certbot renew --quiet
 ```
 
-## 🔄 **8. Configurar CI/CD (Opcional)**
-
-### **✅ GitHub Actions:**
-Criar arquivo `.github/workflows/deploy.yml`:
-```yaml
-name: Deploy to Server
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v2
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '18'
-        
-    - name: Install dependencies
-      run: npm install
-      
-    - name: Build
-      run: npm run build
-      env:
-        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-        
-    - name: Deploy to server
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.KEY }}
-        script: |
-          cd /var/www/eralearn
-          sudo rm -rf *
-          sudo cp -r /tmp/dist/* .
-          sudo chown -R www-data:www-data .
-          sudo systemctl reload nginx
-```
-
-## 📊 **9. Monitoramento e Logs**
-
-### **✅ Configurar Logs:**
+### 5.3 Configurar Certificados no Nginx
 ```bash
-# Verificar logs do Nginx
-sudo tail -f /var/log/nginx/access.log
-sudo tail -f /var/log/nginx/error.log
+# Copiar certificados para o diretório da aplicação
+sudo mkdir -p /opt/eralearn/ssl
+sudo cp /etc/letsencrypt/live/seudominio.com/fullchain.pem /opt/eralearn/ssl/cert.pem
+sudo cp /etc/letsencrypt/live/seudominio.com/privkey.pem /opt/eralearn/ssl/key.pem
+sudo chown -R $USER:$USER /opt/eralearn/ssl
+```
 
-# Configurar rotação de logs
+## 🚀 Passo 6: Deploy da Aplicação
+
+### 6.1 Construir e Iniciar
+```bash
+cd /opt/eralearn
+
+# Construir a aplicação
+docker-compose -f docker-compose.prod.yml build
+
+# Iniciar os serviços
+docker-compose -f docker-compose.prod.yml up -d
+
+# Verificar status
+docker-compose -f docker-compose.prod.yml ps
+```
+
+### 6.2 Verificar Logs
+```bash
+# Logs da aplicação
+docker-compose -f docker-compose.prod.yml logs -f eralearn
+
+# Logs do proxy
+docker-compose -f docker-compose.prod.yml logs -f nginx-proxy
+```
+
+## 🔧 Passo 7: Configurações Adicionais
+
+### 7.1 Firewall
+```bash
+# Ubuntu/Debian (UFW)
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+
+# CentOS/RHEL (firewalld)
+sudo firewall-cmd --permanent --add-service=ssh
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --permanent --add-service=https
+sudo firewall-cmd --reload
+```
+
+### 7.2 Configurar Logrotate
+```bash
 sudo nano /etc/logrotate.d/eralearn
 ```
 
-### **✅ Monitoramento Básico:**
+```bash
+/opt/eralearn/logs/*.log {
+    daily
+    missingok
+    rotate 52
+    compress
+    delaycompress
+    notifempty
+    create 644 root root
+    postrotate
+        docker-compose -f /opt/eralearn/docker-compose.prod.yml restart nginx-proxy
+    endscript
+}
+```
+
+### 7.3 Monitoramento
 ```bash
 # Instalar htop para monitoramento
-sudo apt install htop -y
+sudo apt install -y htop
 
 # Verificar uso de recursos
 htop
-
-# Verificar espaço em disco
 df -h
-
-# Verificar uso de memória
 free -h
 ```
 
-## 🔧 **10. Manutenção**
+## 📊 Passo 8: Scripts de Manutenção
 
-### **✅ Atualizações:**
+### 8.1 Script de Backup
 ```bash
-# Script de atualização
+# backup.sh
 #!/bin/bash
-cd /var/www/eralearn
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="/opt/backups/eralearn"
+APP_DIR="/opt/eralearn"
+
+mkdir -p $BACKUP_DIR
+
+# Backup dos dados
+tar -czf $BACKUP_DIR/eralearn_data_$DATE.tar.gz -C $APP_DIR data/
+
+# Backup da configuração
+tar -czf $BACKUP_DIR/eralearn_config_$DATE.tar.gz -C $APP_DIR .env docker-compose.prod.yml nginx/
+
+# Manter apenas os últimos 7 backups
+find $BACKUP_DIR -name "eralearn_*" -mtime +7 -delete
+
+echo "Backup concluído: $DATE"
+```
+
+### 8.2 Script de Atualização
+```bash
+# update.sh
+#!/bin/bash
+cd /opt/eralearn
+
+# Fazer backup antes da atualização
+./backup.sh
+
+# Parar serviços
+docker-compose -f docker-compose.prod.yml down
+
+# Atualizar código
 git pull origin main
-npm install
-npm run build
-sudo cp -r dist/* /var/www/eralearn/
-sudo chown -R www-data:www-data /var/www/eralearn
-sudo systemctl reload nginx
+
+# Reconstruir e iniciar
+docker-compose -f docker-compose.prod.yml build
+docker-compose -f docker-compose.prod.yml up -d
+
 echo "Atualização concluída!"
 ```
 
-### **✅ Backup:**
+## 🔍 Passo 9: Verificação e Testes
+
+### 9.1 Verificar Status dos Serviços
 ```bash
-# Script de backup
-#!/bin/bash
-DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/backup/eralearn"
+# Status dos containers
+docker ps
 
-mkdir -p $BACKUP_DIR
-tar -czf $BACKUP_DIR/eralearn_$DATE.tar.gz /var/www/eralearn
-
-# Manter apenas últimos 7 backups
-find $BACKUP_DIR -name "eralearn_*.tar.gz" -mtime +7 -delete
-```
-
-## 🚨 **11. Troubleshooting**
-
-### **✅ Problemas Comuns:**
-
-#### **❌ Site não carrega:**
-```bash
-# Verificar status do Nginx
+# Status do Nginx
 sudo systemctl status nginx
 
-# Verificar logs de erro
-sudo tail -f /var/log/nginx/error.log
-
-# Verificar permissões
-ls -la /var/www/eralearn/
+# Testar conectividade
+curl -I https://seudominio.com
 ```
 
-#### **❌ Erro 502 Bad Gateway:**
+### 9.2 Testes de Performance
 ```bash
-# Verificar se a aplicação está rodando
-ps aux | grep node
+# Instalar ferramentas de teste
+sudo apt install -y apache2-utils
 
-# Verificar portas em uso
-sudo netstat -tlnp
+# Teste de carga
+ab -n 1000 -c 10 https://seudominio.com/
 ```
 
-#### **❌ Problemas de SSL:**
-```bash
-# Verificar certificado
-sudo certbot certificates
+## 🆘 Troubleshooting
 
-# Renovar certificado
-sudo certbot renew
-```
+### Problemas Comuns:
 
-## 📞 **12. Suporte**
+1. **Erro de permissão Docker**
+   ```bash
+   sudo usermod -aG docker $USER
+   # Fazer logout e login novamente
+   ```
 
-### **✅ Contatos:**
-- **Email:** suporte@eralearn.com
-- **Documentação:** [docs.eralearn.com](https://docs.eralearn.com)
-- **GitHub:** [github.com/seu-usuario/eralearn](https://github.com/seu-usuario/eralearn)
+2. **Certificado SSL não funciona**
+   ```bash
+   sudo certbot renew --dry-run
+   ```
 
-### **✅ Logs Importantes:**
-- `/var/log/nginx/access.log` - Acessos ao site
-- `/var/log/nginx/error.log` - Erros do Nginx
-- `/var/log/syslog` - Logs do sistema
+3. **Aplicação não carrega**
+   ```bash
+   docker-compose -f docker-compose.prod.yml logs eralearn
+   ```
 
-## 🎯 **Resumo da Instalação**
+4. **Nginx não inicia**
+   ```bash
+   sudo nginx -t
+   sudo systemctl status nginx
+   ```
 
-1. ✅ **Preparar servidor** com dependências
-2. ✅ **Instalar Docker** e Docker Compose
-3. ✅ **Configurar Supabase** (banco de dados)
-4. ✅ **Deploy da aplicação** React
-5. ✅ **Configurar Nginx** como web server
-6. ✅ **Configurar SSL** para HTTPS
-7. ✅ **Configurar CI/CD** (opcional)
-8. ✅ **Monitoramento** e logs
-9. ✅ **Manutenção** e backups
+## 📝 Checklist Final
 
-**Sistema pronto para produção! 🚀**
+- [ ] Servidor atualizado e configurado
+- [ ] Docker e Docker Compose instalados
+- [ ] Nginx configurado
+- [ ] Certificado SSL instalado
+- [ ] Aplicação construída e rodando
+- [ ] Firewall configurado
+- [ ] Backup configurado
+- [ ] Monitoramento ativo
+- [ ] Testes de conectividade realizados
+
+## 🎉 Conclusão
+
+Sua plataforma ERA Learn está agora rodando em produção! 
+
+**URLs importantes:**
+- Aplicação: https://seudominio.com
+- Admin: https://seudominio.com/dashboard
+- API: https://seudominio.com/api
+
+**Comandos úteis:**
+- Ver logs: `docker-compose -f docker-compose.prod.yml logs -f`
+- Reiniciar: `docker-compose -f docker-compose.prod.yml restart`
+- Backup: `./backup.sh`
+- Atualizar: `./update.sh`
+
+---
+
+**Desenvolvido para ERA Learn - Plataforma de Ensino Online**

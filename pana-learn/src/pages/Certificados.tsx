@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { ERALayout } from '@/components/ERALayout';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -117,6 +118,30 @@ const Certificados: React.FC = () => {
         console.log('🔍 Buscando certificados do Supabase (admin)...');
         
         try {
+          // Primeiro, tentar buscar sem joins para ver se há dados básicos
+          const { data: basicData, error: basicError } = await supabase
+            .from('certificados')
+            .select('*')
+            .order('data_emissao', { ascending: false });
+
+          console.log('🔍 Dados básicos:', basicData);
+          console.log('🔍 Erro básico:', basicError);
+
+          if (basicError) {
+            console.error('❌ Erro ao buscar certificados básicos:', basicError);
+            setCertificates([]);
+            calculateStats([]);
+            return;
+          }
+
+          if (!basicData || basicData.length === 0) {
+            console.log('⚠️ Nenhum certificado encontrado na tabela');
+            setCertificates([]);
+            calculateStats([]);
+            return;
+          }
+
+          // Se há dados básicos, tentar buscar com joins
           const { data, error } = await supabase
             .from('certificados')
             .select(`
@@ -127,10 +152,22 @@ const Certificados: React.FC = () => {
             .order('data_emissao', { ascending: false });
 
           if (error) {
-            console.error('❌ Erro ao buscar certificados:', error);
-            console.error('❌ Detalhes do erro:', error);
-            setCertificates([]);
-            calculateStats([]);
+            console.error('❌ Erro ao buscar certificados com joins:', error);
+            // Usar dados básicos se os joins falharem
+            const formattedCertificates = basicData.map(cert => ({
+              id: cert.id,
+              tokensResumo: {
+                NOME_COMPLETO: cert.usuario_nome || 'Usuário',
+                CURSO: cert.categoria_nome || cert.categoria || 'Curso'
+              },
+              templateKey: cert.categoria || 'Geral',
+              createdAt: cert.data_emissao || cert.data_criacao,
+              status: cert.status || 'ativo'
+            }));
+            
+            console.log('✅ Usando dados básicos formatados:', formattedCertificates);
+            setCertificates(formattedCertificates);
+            calculateStats(formattedCertificates);
           } else {
             console.log('✅ Certificados encontrados (admin):', data?.length || 0);
             console.log('✅ Dados brutos:', data);
@@ -138,7 +175,7 @@ const Certificados: React.FC = () => {
             const formattedCertificates = data?.map(cert => ({
               id: cert.id,
               tokensResumo: {
-                NOME_COMPLETO: cert.usuario?.nome || 'Usuário',
+                NOME_COMPLETO: cert.usuario?.nome || cert.usuario_nome || 'Usuário',
                 CURSO: cert.curso?.nome || cert.curso_nome || cert.categoria_nome || 'Curso'
               },
               templateKey: cert.categoria || 'Geral',
