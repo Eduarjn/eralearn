@@ -102,3 +102,7 @@ A autenticação com Supabase foi corrigida e a aplicação deve funcionar norma
 
 
 
+
+
+
+

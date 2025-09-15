@@ -135,3 +135,7 @@ INSERT INTO quiz_perguntas (quiz_id, pergunta, opcoes, resposta_correta, ordem) 
 
 
 
+
+
+
+

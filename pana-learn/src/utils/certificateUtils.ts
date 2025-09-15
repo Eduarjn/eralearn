@@ -280,3 +280,7 @@ export function validateFormat(format: string): format is 'svg' | 'png' | 'pdf' 
 
 
 
+
+
+
+
