@@ -244,7 +244,7 @@ export function ERASidebar() {
       {/* Logo ERA Learn */}
       <div className="relative">
         <img
-          src="/logotipoeralearn.png"
+          src="/logotipoeralearn.svg"
           alt="ERA Learn Logo"
           id="sidebar-logo"
           className={`object-contain logo-rounded cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg ${

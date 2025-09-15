@@ -50,6 +50,12 @@ export default defineConfig(({ mode }) => ({
           radix: ['@radix-ui/react-dropdown-menu']
         }
       }
-    }
-  }
+    },
+    // Garantir que assets estáticos sejam copiados
+    assetsInlineLimit: 0,
+    // Configurar diretório de assets
+    assetsDir: 'assets'
+  },
+  // Configurar servidor de desenvolvimento
+  publicDir: 'public'
 }));

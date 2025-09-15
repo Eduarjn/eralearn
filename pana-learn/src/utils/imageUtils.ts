@@ -3,22 +3,41 @@
  * Funciona tanto no localhost quanto no Vercel
  */
 
-// Detectar se estamos no Vercel
-const isVercel = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
+// Detectar ambiente
+const getEnvironment = () => {
+  if (typeof window === 'undefined') return 'server';
+  
+  const hostname = window.location.hostname;
+  
+  if (hostname.includes('vercel.app')) {
+    return 'vercel';
+  } else if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('192.168.') || hostname.includes('10.0.')) {
+    return 'localhost';
+  } else {
+    return 'production';
+  }
+};
 
 // Base URL para imagens
 const getBaseUrl = () => {
   if (typeof window === 'undefined') return '';
   
-  // Se estamos no Vercel, usar a URL base do projeto
-  if (isVercel) {
-    console.log('🔍 Detectado ambiente Vercel:', window.location.origin);
-    return window.location.origin;
-  }
+  const environment = getEnvironment();
   
-  // Se estamos no localhost, usar caminho relativo
-  console.log('🔍 Detectado ambiente localhost');
-  return '';
+  switch (environment) {
+    case 'vercel':
+      console.log('🔍 Detectado ambiente Vercel:', window.location.origin);
+      return window.location.origin;
+    case 'production':
+      console.log('🔍 Detectado ambiente produção:', window.location.origin);
+      return window.location.origin;
+    case 'localhost':
+      console.log('🔍 Detectado ambiente localhost');
+      return '';
+    default:
+      console.log('🔍 Ambiente desconhecido, usando caminho relativo');
+      return '';
+  }
 };
 
 /**
@@ -54,8 +73,8 @@ export const resolveLogoPath = (customLogoUrl?: string): string => {
     return resolveImagePath(customLogoUrl);
   }
   
-  // Fallback para o logo padrão
-  return resolveImagePath('/logotipoeralearn.png');
+  // Fallback para o logo padrão (SVG primeiro)
+  return resolveImagePath('/logotipoeralearn.svg');
 };
 
 /**
@@ -114,8 +133,8 @@ export const testImageLoad = (url: string): Promise<boolean> => {
  */
 export const imageFallbacks = {
   logo: [
-    '/logotipoeralearn.png',
     '/logotipoeralearn.svg',
+    '/logotipoeralearn.png',
     '/placeholder.svg'
   ],
   favicon: [
