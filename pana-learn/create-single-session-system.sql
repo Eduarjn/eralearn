@@ -189,3 +189,9 @@ COMMENT ON COLUMN public.active_sessions.expires_at IS 'Data de expiração da s
 
 
 
+
+
+
+
+
+

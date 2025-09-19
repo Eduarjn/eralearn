@@ -77,3 +77,9 @@ SELECT 'Verifique a estrutura acima e ajuste os scripts conforme necessário' as
 
 
 
+
+
+
+
+
+

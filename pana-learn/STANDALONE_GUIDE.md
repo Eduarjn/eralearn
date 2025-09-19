@@ -346,3 +346,9 @@ O **Modo Standalone** torna a ERA Learn **completamente independente**, perfeita
 
 
 
+
+
+
+
+
+

@@ -218,3 +218,8 @@ echo ""
 # Mostrar logs recentes
 echo "📋 Logs recentes da aplicação:"
 docker-compose -f docker-compose.prod.yml logs --tail=10
+
+
+
+
+

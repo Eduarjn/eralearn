@@ -272,3 +272,9 @@ SELECT get_branding_config() as resultado_consulta;
 
 
 
+
+
+
+
+
+

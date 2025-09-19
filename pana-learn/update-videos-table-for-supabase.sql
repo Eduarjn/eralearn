@@ -78,3 +78,9 @@ SELECT 'Tabela videos atualizada para compatibilidade com Supabase Storage!' as 
 
 
 
+
+
+
+
+
+
