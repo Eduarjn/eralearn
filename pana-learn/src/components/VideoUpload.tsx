@@ -5,11 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, Video, X, Youtube } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Switch } from '@/components/ui/switch';
+import { Upload, Video, X, Youtube, HardDrive, Cloud } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { useCourses, useCourseModules } from '@/hooks/useCourses';
+import { uploadVideo, getVideoUploadTargetInfo, VideoUploadTarget } from '@/lib/videoStorage';
 
 interface VideoUploadProps {
   onClose: () => void;
@@ -47,6 +49,12 @@ export function VideoUpload({ onClose, onSuccess, preSelectedCourseId }: VideoUp
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [youtubeUrl, setYoutubeUrl] = useState('');
+
+  // Informações do target de upload
+  const uploadTargetInfo = getVideoUploadTargetInfo();
+  
+  // Estado para escolha manual do target de upload
+  const [manualUploadTarget, setManualUploadTarget] = useState<VideoUploadTarget | null>(null);
 
   // Debug logs
   console.log('🔍 VideoUpload - Estado dos cursos:', {
@@ -624,10 +632,20 @@ export function VideoUpload({ onClose, onSuccess, preSelectedCourseId }: VideoUp
       let storagePath = '';
 
       if (activeTab === 'upload') {
-        // Upload do vídeo
-        const videoPath = `videos/${Date.now()}_${videoFile!.name}`;
-        videoUrl = await uploadFile(videoFile!, 'training-videos', videoPath);
-        storagePath = videoPath;
+        // Upload do vídeo usando a nova camada utilitária
+        // Se há escolha manual, usar ela; senão usar o target configurado
+        const targetToUse = manualUploadTarget || uploadTargetInfo.target;
+        const { publicUrl, storagePath: uploadedStoragePath } = await uploadVideo(videoFile!, targetToUse);
+        storagePath = uploadedStoragePath;
+        
+        // Para servidor local, salvar apenas o nome do arquivo (ou caminho relativo)
+        // para que o player reconstrua a URL (evita depender da porta/host)
+        if (targetToUse === 'local') {
+          const filename = uploadedStoragePath.split('/').pop() || uploadedStoragePath;
+          videoUrl = filename; // será resolvido pelo hook para http://localhost:3001/videos/<filename>
+        } else {
+          videoUrl = publicUrl; // Supabase mantém URL pública
+        }
       } else {
         // YouTube URL
         videoUrl = youtubeUrl;
@@ -675,17 +693,36 @@ export function VideoUpload({ onClose, onSuccess, preSelectedCourseId }: VideoUp
 
       console.log('✅ VideoUpload - Curso validado:', courseCheck);
 
-      // Obter próxima ordem disponível
-      const { data: nextOrderData, error: orderError } = await supabase.rpc('obter_proxima_ordem_video', {
-        p_curso_id: selectedCourseId
-      });
+      // Obter próxima ordem disponível (com fallback caso a RPC não exista)
+      let nextOrder = 1;
+      try {
+        const { data: nextOrderData, error: orderError } = await supabase.rpc('obter_proxima_ordem_video', {
+          p_curso_id: selectedCourseId
+        });
 
-      if (orderError) {
-        console.error('❌ Erro ao obter próxima ordem:', orderError);
-        throw new Error('Erro ao calcular ordem do vídeo');
+        if (orderError) {
+          console.warn('⚠️ RPC obter_proxima_ordem_video falhou. Aplicando fallback local.', orderError);
+        } else if (typeof nextOrderData === 'number') {
+          nextOrder = nextOrderData;
+        }
+      } catch (rpcErr) {
+        console.warn('⚠️ RPC obter_proxima_ordem_video indisponível. Usando fallback local.', rpcErr);
       }
 
-      const nextOrder = nextOrderData || 1;
+      if (nextOrder === 1) {
+        // Fallback local: busca o maior valor de ordem do curso e soma 1
+        const { data: maxOrderRow, error: maxOrderError } = await supabase
+          .from('videos')
+          .select('ordem')
+          .eq('curso_id', selectedCourseId)
+          .order('ordem', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!maxOrderError && maxOrderRow && typeof maxOrderRow.ordem === 'number') {
+          nextOrder = (maxOrderRow.ordem || 0) + 1;
+        }
+      }
 
       // Dados para inserção no banco
       const videoDataToInsert = {
@@ -697,7 +734,8 @@ export function VideoUpload({ onClose, onSuccess, preSelectedCourseId }: VideoUp
         categoria: courseCategory,
         curso_id: selectedCourseId,
         modulo_id: selectedModuleId || null,
-        ordem: nextOrder
+        ordem: nextOrder,
+        provedor: activeTab === 'youtube' ? 'youtube' : (manualUploadTarget || uploadTargetInfo.target)
       };
 
       console.log('📝 VideoUpload - Dados para inserção:', {
@@ -722,17 +760,50 @@ export function VideoUpload({ onClose, onSuccess, preSelectedCourseId }: VideoUp
 
       console.log('📝 VideoUpload - Inserindo vídeo no banco:', videoDataToInsert);
 
-      // Salvar informações do vídeo no banco
-      const { data: insertedVideo, error: insertError } = await supabase
-        .from('videos')
-        .insert(videoDataToInsert)
-        .select()
-        .single();
+      // Salvar informações do vídeo no banco (com retries automáticos removendo colunas ausentes)
+      let insertedVideo;
+      {
+        let attempt = 0;
+        let payload: any = { ...videoDataToInsert };
+        const maxAttempts = 3;
+        while (attempt < maxAttempts) {
+          const { data, error } = await supabase
+            .from('videos')
+            .insert(payload)
+            .select()
+            .single();
 
-      if (insertError) {
-        console.error('❌ Erro ao inserir vídeo:', insertError);
-        console.error('❌ Dados que tentou inserir:', videoDataToInsert);
-        throw insertError;
+          if (!error) {
+            insertedVideo = data;
+            break;
+          }
+
+          const message = String(error.message || '').toLowerCase();
+          const colMatch = message.match(/could not find the '([^']+)' column|column\s+([a-z_]+)\s+does not exist/);
+          const missingCol = colMatch ? (colMatch[1] || colMatch[2]) : undefined;
+
+          console.warn('⚠️ Erro ao inserir vídeo. Tentando ajustar payload...', { attempt, missingCol, message, payload });
+
+          if (missingCol && missingCol in payload) {
+            delete payload[missingCol];
+            attempt++;
+            continue;
+          }
+
+          // Tentar heurísticas comuns
+          let adjusted = false;
+          if ('ordem' in payload && message.includes('ordem')) {
+            delete payload.ordem; adjusted = true;
+          }
+          if ('provedor' in payload && message.includes('provedor')) {
+            delete payload.provedor; adjusted = true;
+          }
+          if (adjusted) { attempt++; continue; }
+
+          console.error('❌ Erro ao inserir vídeo (sem como ajustar):', error);
+          console.error('❌ Dados que tentou inserir:', payload);
+          throw error;
+        }
       }
 
       console.log('✅ Vídeo inserido com sucesso:', insertedVideo);
@@ -812,6 +883,61 @@ export function VideoUpload({ onClose, onSuccess, preSelectedCourseId }: VideoUp
             YouTube
           </button>
         </div>
+
+        {/* Toggle para escolha manual do target de upload */}
+        {activeTab === 'upload' && (
+          <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Cloud className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">Supabase</span>
+                </div>
+                <Switch
+                  checked={(manualUploadTarget || uploadTargetInfo.target) === 'local'}
+                  onCheckedChange={(checked) => {
+                    setManualUploadTarget(checked ? 'local' : 'supabase');
+                  }}
+                />
+                <div className="flex items-center gap-2">
+                  <HardDrive className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">Local</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">
+                  {manualUploadTarget ? (
+                    <span className="font-medium text-blue-700">
+                      {manualUploadTarget === 'local' ? 'Local' : 'Supabase'}
+                    </span>
+                  ) : (
+                    <span className="text-gray-500">Automático</span>
+                  )}
+                </span>
+                {manualUploadTarget && (
+                  <button
+                    type="button"
+                    onClick={() => setManualUploadTarget(null)}
+                    className="text-xs text-gray-500 hover:text-gray-700 underline"
+                  >
+                    Resetar
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-gray-600">
+              {manualUploadTarget ? (
+                <span className="text-blue-700">
+                  📍 Vídeo será salvo em: <strong>{manualUploadTarget === 'local' ? 'Servidor local' : 'Supabase Cloud'}</strong>
+                </span>
+              ) : (
+                <span>
+                  🔄 Usando configuração automática: <strong>{uploadTargetInfo.target === 'local' ? 'Servidor local' : 'Supabase Cloud'}</strong>
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

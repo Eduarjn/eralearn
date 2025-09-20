@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import type { Database } from '@/integrations/supabase/types';
 
 type VideoProgress = Database['public']['Tables']['video_progress']['Row'];

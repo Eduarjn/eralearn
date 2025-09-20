@@ -168,3 +168,34 @@ SELECT '3. Cada curso terá seu quiz específico' as instrucao;
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

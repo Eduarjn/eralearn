@@ -153,3 +153,34 @@ SELECT '✅ Novo trigger funcional criado' as correcao;
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

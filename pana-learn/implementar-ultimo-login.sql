@@ -245,3 +245,34 @@ RAISE NOTICE 'Script de implementação de último login executado com sucesso!'
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

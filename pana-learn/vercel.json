@@ -1,29 +1,11 @@
 {
   "rewrites": [
     {
-      "source": "/((?!.*\\.(png|jpg|jpeg|gif|svg|ico|webp|css|js|woff|woff2|ttf|eot|txt|xml|json)).*)",
+      "source": "/((?!.*\\.(png|jpg|jpeg|gif|svg|ico|webp|css|js|woff|woff2|ttf|eot|txt|xml|json|pdf|zip|mp4|mp3)).*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
-    {
-      "source": "/lovable-uploads/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/logotipoeralearn.(png|svg)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
     {
       "source": "/(.*\\.(png|jpg|jpeg|gif|svg|ico|webp))",
       "headers": [

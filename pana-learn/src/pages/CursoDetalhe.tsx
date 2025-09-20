@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import CommentsSection from '@/components/CommentsSection';
 import { useQuiz } from '@/hooks/useQuiz';
 import { useOptionalQuiz } from '@/hooks/useOptionalQuiz';
+import { useCertificates } from '@/hooks/useCertificates';
 import { QuizNotification } from '@/components/QuizNotification';
 import { CourseQuizModal } from '@/components/CourseQuizModal';
 import { toast } from '@/components/ui/use-toast';
@@ -128,13 +129,14 @@ const CursoDetalhe = () => {
   // Hook para gerenciar quiz opcional (não interfere no fluxo atual)
   const { quizState, loading: quizLoading, checkCourseCompletion } = useOptionalQuiz(id || '');
   
-  // Hook para gerenciar quiz e certificado
+  // Hook para gerenciar quiz
   const { 
     quizConfig, 
-    isCourseCompleted, 
-    certificate, 
-    generateCertificate 
+    certificate
   } = useQuiz(userId, id);
+  
+  // Hook para gerenciar certificados
+  const { generateCertificate } = useCertificates(userId);
 
   // Calcular progresso do curso
   const calculateCourseProgress = React.useCallback(async () => {
@@ -225,9 +227,10 @@ const CursoDetalhe = () => {
         }
         
         // Gerar certificado se disponível (nota 100 para conclusão por vídeos)
-        if (generateCertificate) {
+        if (generateCertificate && id) {
           try {
-            await generateCertificate(100);
+            // Para conclusão por vídeos, usar um quiz_id padrão ou null
+            await generateCertificate(id, '', 100);
             console.log('✅ Certificado gerado com sucesso!');
           } catch (error) {
             console.error('❌ Erro ao gerar certificado:', error);
@@ -276,9 +279,11 @@ const CursoDetalhe = () => {
     }
     
     // Gerar certificado após conclusão do quiz (nota será definida pelo quiz)
-    if (generateCertificate) {
+    if (generateCertificate && id) {
       try {
-        await generateCertificate(100); // Nota padrão para conclusão por quiz
+        // Para conclusão por quiz, usar quiz_id da categoria
+        const quizId = currentCategory || '';
+        await generateCertificate(id, quizId, 100); // Nota padrão para conclusão por quiz
         toast({
           title: "Parabéns!",
           description: "Quiz concluído com sucesso! Seu certificado foi gerado.",
@@ -450,12 +455,23 @@ const CursoDetalhe = () => {
     });
   }
 
+  // Calcular progresso total
+  const totalProgress = Object.values(progress).reduce((acc, p) => acc + (p.percentual_assistido || 0), 0);
+  const averageProgress = filteredVideos.length > 0 ? totalProgress / filteredVideos.length : 0;
+
+  // Verificar se o curso está completo
+  const isCourseComplete = filteredVideos.length > 0 && 
+    filteredVideos.every(video => {
+      const videoProgress = progress[video.id];
+      return videoProgress?.concluido === true || videoProgress?.percentual_assistido >= 90;
+    });
+
   // Verificar se deve mostrar o quiz quando o curso for concluído
   React.useEffect(() => {
-    if (isCourseCompleted && !certificate && quizConfig) {
+    if (isCourseComplete && !certificate && quizConfig) {
       setShowQuizModal(true);
     }
-  }, [isCourseCompleted, certificate, quizConfig]);
+  }, [isCourseComplete, certificate, quizConfig]);
 
   const handleViewCertificate = () => {
     if (certificate) {
@@ -505,17 +521,6 @@ const CursoDetalhe = () => {
       setSelectedVideo(filteredVideos[0]);
     }
   }, [filteredVideos, selectedVideo]);
-
-  // Calcular progresso total
-  const totalProgress = Object.values(progress).reduce((acc, p) => acc + (p.percentual_assistido || 0), 0);
-  const averageProgress = filteredVideos.length > 0 ? totalProgress / filteredVideos.length : 0;
-
-  // Verificar se o curso está completo
-  const isCourseComplete = filteredVideos.length > 0 && 
-    filteredVideos.every(video => {
-      const videoProgress = progress[video.id];
-      return videoProgress?.concluido === true || videoProgress?.percentual_assistido >= 90;
-    });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -792,7 +797,6 @@ const CursoDetalhe = () => {
         {/* Video Upload Modal */}
         {showVideoUpload && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            {console.log('🎯 Modal VideoUpload sendo renderizado!')}
             <VideoUpload
               onClose={() => {
                 console.log('🎯 Fechando modal VideoUpload');

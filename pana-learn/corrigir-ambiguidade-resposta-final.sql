@@ -123,3 +123,34 @@ WHERE parent_id IS NOT NULL AND ativo = true;
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

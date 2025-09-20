@@ -96,3 +96,34 @@ Após a correção, o comportamento deve ser:
 
 O problema do botão "Próxima" foi completamente resolvido e agora funciona corretamente para todas as opções de resposta.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

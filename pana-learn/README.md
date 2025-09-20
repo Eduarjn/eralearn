@@ -1,324 +1,229 @@
+# 🚀 ERA Learn - Plataforma de Ensino Online
 
-# 🚀 ERA Learn - Plataforma de Educação
+Sistema completo de treinamentos online com certificados, quizzes e gestão de usuários.
 
-Uma plataforma moderna de educação com suporte a IA integrado, construída com React, TypeScript, Tailwind CSS e Supabase.
+## 🎯 Características
 
-## ✨ Características
+- ✅ **Sistema de Treinamentos** - Cursos com vídeos e progresso
+- ✅ **Sistema de Quizzes** - Avaliações interativas
+- ✅ **Certificados Automáticos** - Geração de certificados em PDF/SVG
+- ✅ **Gestão de Usuários** - Admin, clientes e domínios
+- ✅ **White Label** - Personalização por domínio
+- ✅ **Sistema de IA** - Suporte inteligente
+- ✅ **Responsivo** - Funciona em desktop e mobile
 
-### 🎓 **Educação**
-- ✅ Sistema de cursos e vídeos
-- ✅ Progresso automático
-- ✅ Quizzes integrados
-- ✅ Certificados automáticos
-- ✅ Gamificação
+## 🚀 Instalação Rápida no Servidor
 
-### 🤖 **Módulo de IA (Novo!)**
-- ✅ Assistentes configuráveis
-- ✅ Suporte a múltiplos provedores (OpenAI, Azure, OpenRouter)
-- ✅ RAG (Retrieval Augmented Generation)
-- ✅ Chat flutuante inteligente
-- ✅ Controle de custos e limites
-- ✅ Segurança e privacidade
+### Pré-requisitos
+- Servidor Ubuntu 20.04+ (2GB RAM, 20GB disco)
+- Domínio apontando para o servidor
+- Acesso SSH com sudo
 
-### 🛡️ **Segurança**
-- ✅ Autenticação Supabase
-- ✅ RLS (Row Level Security)
-- ✅ Controle de acesso por organização
-- ✅ Criptografia de chaves de API
-
-## 🚀 Quick Start
-
-### 1. **Clone e Instale**
+### Instalação com 1 Comando
 
 ```bash
-git clone <repository-url>
-cd pana-learn
-npm install
+# Conectar ao servidor
+ssh usuario@ip_do_servidor
+
+# Instalar tudo automaticamente
+curl -fsSL https://raw.githubusercontent.com/Eduarjn/eralearn/main/install.sh | bash -s seudominio.com admin@seudominio.com
 ```
 
-### 2. **Configure o Ambiente**
+**Pronto!** A aplicação estará rodando em `https://seudominio.com`
+
+## 🛠️ Instalação Manual
+
+### 1. Clonar Repositório
+```bash
+git clone https://github.com/Eduarjn/eralearn.git
+cd eralearn
+```
+
+### 2. Executar Instalação
+```bash
+chmod +x install.sh
+./install.sh seudominio.com admin@seudominio.com
+```
+
+### 3. Configurar Variáveis
+```bash
+nano .env
+# Editar VITE_APP_URL com seu domínio
+```
+
+### 4. Fazer Deploy
+```bash
+./deploy.sh seudominio.com admin@seudominio.com
+```
+
+## 📁 Estrutura do Projeto
+
+```
+eralearn/
+├── src/                    # Código fonte React
+├── public/                 # Arquivos estáticos
+├── certificates/           # Templates de certificados
+├── data/                   # Dados persistentes
+├── nginx/                  # Configurações Nginx
+├── docker-compose.prod.yml # Docker para produção
+├── Dockerfile.prod         # Dockerfile otimizado
+├── install.sh              # Instalação automática
+├── deploy.sh               # Deploy automático
+└── README.md               # Este arquivo
+```
+
+## 🔧 Comandos Úteis
 
 ```bash
-# Copie o arquivo de exemplo
-cp .env.example .env.local
+# Status da aplicação
+./status.sh
 
-# Configure as variáveis necessárias
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-FEATURE_AI=true  # Para habilitar o módulo de IA
+# Ver logs
+docker-compose -f docker-compose.prod.yml logs -f
+
+# Fazer backup
+./backup.sh
+
+# Atualizar aplicação
+./update.sh
+
+# Reiniciar serviços
+docker-compose -f docker-compose.prod.yml restart
 ```
 
-### 3. **Configure o Supabase**
+## 🌐 URLs Importantes
 
-#### **3.1. Execute as Migrations**
+- **Aplicação**: `https://seudominio.com`
+- **Admin**: `https://seudominio.com/dashboard`
+- **API**: `https://seudominio.com/api`
+- **Health Check**: `https://seudominio.com/health`
 
-```sql
--- Execute no SQL Editor do Supabase Dashboard
--- 1. Migration principal
--- 2. Migration de IA (se habilitado)
-```
+## 🔒 Segurança
 
-#### **3.2. Configure RLS Policies**
+- ✅ SSL/HTTPS automático (Let's Encrypt)
+- ✅ Firewall configurado
+- ✅ Rate limiting
+- ✅ Headers de segurança
+- ✅ Renovação automática de certificados
 
-As policies são aplicadas automaticamente pelas migrations.
+## 📊 Monitoramento
 
-### 4. **Execute o Projeto**
+- ✅ Logs centralizados
+- ✅ Health checks
+- ✅ Backup automático
+- ✅ Atualizações automatizadas
+
+## 🆘 Suporte
+
+### Problemas Comuns
+
+1. **Erro de permissão Docker:**
+   ```bash
+   sudo usermod -aG docker $USER
+   # Fazer logout e login novamente
+   ```
+
+2. **Certificado SSL não funciona:**
+   ```bash
+   sudo certbot certificates
+   sudo certbot renew
+   ```
+
+3. **Aplicação não carrega:**
+   ```bash
+   docker-compose -f docker-compose.prod.yml logs
+   ```
+
+### Logs e Debug
 
 ```bash
-npm run dev
+# Ver logs da aplicação
+docker-compose -f docker-compose.prod.yml logs -f eralearn
+
+# Ver logs do proxy
+docker-compose -f docker-compose.prod.yml logs -f nginx-proxy
+
+# Status dos containers
+docker ps
+
+# Verificar conectividade
+curl -I https://seudominio.com
 ```
 
-Acesse: `http://localhost:5173`
+## 📝 Configuração
 
-## 🤖 **Módulo de IA**
+### Variáveis de Ambiente (.env)
 
-### **Habilitando o Módulo**
+```env
+# Domínio da aplicação
+VITE_APP_URL=https://seudominio.com
 
-1. **Configure a Feature Flag:**
-   ```bash
-   FEATURE_AI=true
-   ```
+# Supabase (já configurado)
+VITE_SUPABASE_URL=https://oqoxhavdhrgdjvxvajze.supabase.co
+VITE_SUPABASE_ANON_KEY=sua_chave_aqui
 
-2. **Execute as Migrations de IA:**
-   ```sql
-   -- Execute no Supabase Dashboard > SQL Editor
-   -- 1. 20250101000000-ai-module.sql
-   -- 2. 20250101000001-ai-policies.sql
-   ```
+# Configurações de certificados
+CERT_DATA_DIR=/opt/eralearn/data
 
-3. **Configure Provedores de IA:**
-   ```bash
-   # OpenAI
-   OPENAI_API_KEY=sk-...
-   
-   # Azure OpenAI
-   AZURE_OPENAI_ENDPOINT=https://...
-   AZURE_OPENAI_API_KEY=...
-   
-   # OpenRouter
-   OPENROUTER_API_KEY=...
-   ```
-
-### **Funcionalidades do Módulo IA**
-
-#### **🎯 Assistentes**
-- Configure personalidades e comportamentos
-- Defina prompts do sistema
-- Ajuste temperatura e tokens
-- Habilite ferramentas específicas
-
-#### **🔌 Conexões**
-- Suporte a OpenAI, Azure, OpenRouter
-- Chaves criptografadas
-- Teste de conectividade
-- Monitoramento de uso
-
-#### **📚 Conhecimento**
-- Upload de PDFs, DOCs, URLs
-- Indexação automática com RAG
-- Chunks configuráveis
-- Busca semântica
-
-#### **📊 Logs & Custos**
-- Monitoramento de uso
-- Controle de custos
-- Exportação de dados
-- Métricas detalhadas
-
-#### **🛡️ Segurança**
-- Mascaramento de PII
-- Termos bloqueados
-- Escalação para humano
-- Limites de uso
-
-### **Integração com Chat Flutuante**
-
-O chat flutuante "Suporte IA" usa automaticamente:
-- Assistente configurado
-- Provedor ativo
-- Conhecimento indexado
-- Configurações de segurança
-
-## 🏗️ **Arquitetura**
-
-### **Frontend**
-```
-src/
-├── components/          # Componentes React
-├── pages/              # Páginas da aplicação
-│   └── admin/ai/       # Módulo de IA
-├── hooks/              # Hooks customizados
-│   └── useAI.ts        # Hook principal de IA
-├── lib/                # Utilitários
-│   ├── ai-types.ts     # Tipos TypeScript
-│   └── ai-utils.ts     # Funções utilitárias
-└── integrations/       # Integrações externas
-    └── supabase/       # Cliente Supabase
+# Configurações de segurança
+SESSION_SECRET=seu_secret_muito_seguro
+JWT_SECRET=seu_jwt_secret_muito_seguro
 ```
 
-### **Backend (Supabase)**
-```
-supabase/
-├── functions/          # Edge Functions
-│   ├── ai-chat/        # Chat de IA
-│   ├── ai-embed/       # Indexação RAG
-│   └── ai-usage/       # Métricas de uso
-└── migrations/         # Migrations SQL
-    ├── ai-module.sql   # Tabelas de IA
-    └── ai-policies.sql # RLS Policies
-```
+## 🔄 Atualizações
 
-### **Tabelas de IA**
-- `ai_providers` - Provedores configurados
-- `ai_provider_keys` - Chaves criptografadas
-- `ai_assistants` - Assistentes configurados
-- `ai_knowledge_sources` - Fontes de conhecimento
-- `ai_chunks` - Chunks com embeddings
-- `ai_chat_sessions` - Sessões de chat
-- `ai_messages` - Mensagens das sessões
-- `ai_usage_limits` - Limites de uso
-- `ai_security_settings` - Configurações de segurança
-
-## 🔧 **Desenvolvimento**
-
-### **Scripts Disponíveis**
-
+### Atualização Automática
 ```bash
-# Desenvolvimento
-npm run dev
+# Atualizar código
+git pull origin main
 
-# Build de produção
-npm run build
-
-# Preview do build
-npm run preview
-
-# Lint
-npm run lint
-
-# Type check
-npm run type-check
+# Reconstruir e reiniciar
+./update.sh
 ```
 
-### **Estrutura de Desenvolvimento**
-
-1. **Feature Flags:** Tudo atrás de `FEATURE_AI=true`
-2. **Aditivo:** Não modifica código existente
-3. **Seguro:** RLS policies em todas as tabelas
-4. **Tipado:** TypeScript completo
-5. **Testado:** Validação com Zod
-
-### **Adicionando Novos Provedores**
-
-1. **Atualize os tipos:**
-   ```typescript
-   // lib/ai-types.ts
-   export type AIProvider = 'openai' | 'azure' | 'openrouter' | 'novo_provedor';
-   ```
-
-2. **Adicione configuração:**
-   ```typescript
-   // lib/ai-utils.ts
-   export const AI_SUPPORTED_MODELS = {
-     novo_provedor: ['modelo1', 'modelo2'],
-   };
-   ```
-
-3. **Implemente na Edge Function:**
-   ```typescript
-   // supabase/functions/ai-chat/index.ts
-   function getProviderBaseUrl(provider: string): string {
-     const urls = {
-       novo_provedor: 'https://api.novo-provedor.com',
-     };
-     return urls[provider] || urls.openai;
-   }
-   ```
-
-## 🚀 **Deploy**
-
-### **Vercel (Recomendado)**
-
-1. **Configure as variáveis de ambiente:**
-   ```bash
-   VITE_SUPABASE_URL=...
-   VITE_SUPABASE_ANON_KEY=...
-   FEATURE_AI=true
-   OPENAI_API_KEY=...
-   ```
-
-2. **Deploy automático:**
-   ```bash
-   vercel --prod
-   ```
-
-### **Supabase Edge Functions**
-
+### Atualização Manual
 ```bash
-# Deploy das Edge Functions
-supabase functions deploy ai-chat
-supabase functions deploy ai-embed
-supabase functions deploy ai-usage
+# Parar serviços
+docker-compose -f docker-compose.prod.yml down
+
+# Atualizar código
+git pull origin main
+
+# Reconstruir
+docker-compose -f docker-compose.prod.yml build
+
+# Iniciar
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
-## 📊 **Monitoramento**
+## 📋 Checklist de Instalação
 
-### **Logs de IA**
-- Todas as interações são logadas
-- Custos calculados automaticamente
-- Métricas de performance
-- Alertas de limites
+- [ ] Servidor Ubuntu 20.04+
+- [ ] Domínio apontando para o servidor
+- [ ] Acesso SSH com sudo
+- [ ] Executar `install.sh`
+- [ ] Configurar arquivo `.env`
+- [ ] Executar `deploy.sh`
+- [ ] Testar todas as funcionalidades
+- [ ] Configurar backup automático
 
-### **Dashboard de Uso**
-- Acesse em `/admin/ai`
-- Visualize uso por período
-- Exporte relatórios
-- Configure alertas
+## 🎉 Resultado Final
 
-## 🔒 **Segurança**
+Após a instalação, você terá:
 
-### **Proteções Implementadas**
-- ✅ Chaves de API nunca expostas no frontend
-- ✅ RLS policies por organização
-- ✅ Criptografia de dados sensíveis
-- ✅ Validação de entrada com Zod
-- ✅ Rate limiting configurável
-- ✅ Mascaramento de PII
+- ✅ Plataforma ERA Learn rodando em produção
+- ✅ SSL/HTTPS configurado automaticamente
+- ✅ Sistema de backup funcionando
+- ✅ Monitoramento ativo
+- ✅ Atualizações automatizadas
+- ✅ Segurança configurada
 
-### **Boas Práticas**
-- Sempre use Edge Functions para APIs externas
-- Valide todas as entradas
-- Implemente rate limiting
-- Monitore uso e custos
-- Mantenha chaves seguras
+## 📞 Contato
 
-## 🤝 **Contribuição**
-
-1. **Fork o projeto**
-2. **Crie uma branch:**
-   ```bash
-   git checkout -b feature/nova-funcionalidade
-   ```
-3. **Commit suas mudanças:**
-   ```bash
-   git commit -m 'Adiciona nova funcionalidade'
-   ```
-4. **Push para a branch:**
-   ```bash
-   git push origin feature/nova-funcionalidade
-   ```
-5. **Abra um Pull Request**
-
-## 📝 **Licença**
-
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
-## 🆘 **Suporte**
-
-- **Documentação:** [Wiki do projeto]
-- **Issues:** [GitHub Issues]
-- **Discord:** [Servidor da comunidade]
+- **Desenvolvido por**: ERA Learn Team
+- **Website**: https://era.com.br
+- **Suporte**: suporte@era.com.br
 
 ---
 
-**Desenvolvido com ❤️ pela equipe ERA Learn**
+**🚀 Sua plataforma de ensino online está pronta para uso!**

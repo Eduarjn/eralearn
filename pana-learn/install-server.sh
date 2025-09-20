@@ -1,9 +1,10 @@
 #!/bin/bash
 
-# 🚀 Script de Instalação Automatizada - ERA Learn
-# Execute como: sudo bash install-server.sh
+# ========================================
+# Script de Instalação ERA Learn no Servidor
+# ========================================
 
-set -e  # Parar em caso de erro
+set -e
 
 # Cores para output
 RED='\033[0;31m'
@@ -18,267 +19,252 @@ log() {
 }
 
 error() {
-    echo -e "${RED}[ERRO] $1${NC}"
+    echo -e "${RED}[ERROR] $1${NC}"
     exit 1
 }
 
 warning() {
-    echo -e "${YELLOW}[AVISO] $1${NC}"
+    echo -e "${YELLOW}[WARNING] $1${NC}"
 }
 
 info() {
     echo -e "${BLUE}[INFO] $1${NC}"
 }
 
-# Verificar se está rodando como root
-if [[ $EUID -ne 0 ]]; then
-   error "Este script deve ser executado como root (sudo)"
+# Verificar se é root
+if [[ $EUID -eq 0 ]]; then
+   error "Este script não deve ser executado como root. Use um usuário com sudo."
 fi
 
-# Configurações
-APP_NAME="ERA Learn"
-APP_DIR="/var/www/eralearn"
-NGINX_SITE="eralearn"
-DOMAIN=""
-SUPABASE_URL=""
-SUPABASE_KEY=""
-
-# Banner
-echo -e "${BLUE}"
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║                    ERA Learn - Instalação                   ║"
-echo "║                        Versão 1.0.0                         ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
-echo -e "${NC}"
-
-# Coletar informações
-log "Coletando informações de configuração..."
-
-read -p "Digite o domínio do site (ex: eralearn.com): " DOMAIN
-read -p "Digite a URL do Supabase: " SUPABASE_URL
-read -p "Digite a chave anônima do Supabase: " SUPABASE_KEY
-
-if [[ -z "$DOMAIN" || -z "$SUPABASE_URL" || -z "$SUPABASE_KEY" ]]; then
-    error "Todas as informações são obrigatórias!"
+# Verificar sistema operacional
+if [[ -f /etc/os-release ]]; then
+    . /etc/os-release
+    OS=$NAME
+    VER=$VERSION_ID
+else
+    error "Sistema operacional não suportado"
 fi
 
-log "Iniciando instalação do $APP_NAME..."
+log "Iniciando instalação do ERA Learn no $OS $VER"
 
-# 1. Atualizar sistema
+# ========================================
+# 1. ATUALIZAR SISTEMA
+# ========================================
 log "Atualizando sistema..."
-apt update && apt upgrade -y
 
-# 2. Instalar dependências básicas
-log "Instalando dependências básicas..."
-apt install -y curl wget git unzip build-essential software-properties-common
-
-# 3. Instalar Node.js
-log "Instalando Node.js..."
-curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-apt-get install -y nodejs
-
-# Verificar instalação
-if ! command -v node &> /dev/null; then
-    error "Node.js não foi instalado corretamente"
+if [[ "$OS" == *"Ubuntu"* ]] || [[ "$OS" == *"Debian"* ]]; then
+    sudo apt update && sudo apt upgrade -y
+    sudo apt install -y curl wget git unzip software-properties-common apt-transport-https ca-certificates gnupg lsb-release
+elif [[ "$OS" == *"CentOS"* ]] || [[ "$OS" == *"Red Hat"* ]]; then
+    sudo yum update -y
+    sudo yum install -y curl wget git unzip yum-utils
+else
+    error "Sistema operacional não suportado: $OS"
 fi
 
-log "Node.js $(node --version) instalado com sucesso"
-log "npm $(npm --version) instalado com sucesso"
+# ========================================
+# 2. INSTALAR DOCKER
+# ========================================
+log "Instalando Docker..."
 
-# 4. Instalar Nginx
+if ! command -v docker &> /dev/null; then
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+    sudo usermod -aG docker $USER
+    rm get-docker.sh
+    log "Docker instalado com sucesso"
+else
+    info "Docker já está instalado"
+fi
+
+# Instalar Docker Compose
+if ! command -v docker-compose &> /dev/null; then
+    sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+    log "Docker Compose instalado com sucesso"
+else
+    info "Docker Compose já está instalado"
+fi
+
+# ========================================
+# 3. INSTALAR NGINX
+# ========================================
 log "Instalando Nginx..."
-apt install -y nginx
-systemctl start nginx
-systemctl enable nginx
 
-# 5. Criar diretório da aplicação
-log "Criando diretório da aplicação..."
-mkdir -p $APP_DIR
-
-# 6. Clonar repositório (se não existir)
-if [ ! -d "/tmp/eralearn" ]; then
-    log "Clonando repositório..."
-    cd /tmp
-    git clone https://github.com/seu-usuario/eralearn.git
+if [[ "$OS" == *"Ubuntu"* ]] || [[ "$OS" == *"Debian"* ]]; then
+    sudo apt install -y nginx
+elif [[ "$OS" == *"CentOS"* ]] || [[ "$OS" == *"Red Hat"* ]]; then
+    sudo yum install -y nginx
 fi
 
-# 7. Configurar aplicação
-log "Configurando aplicação..."
-cd /tmp/eralearn/pana-learn
+sudo systemctl start nginx
+sudo systemctl enable nginx
+log "Nginx instalado e iniciado"
 
-# Criar arquivo .env
-cat > .env << EOF
-# Supabase Configuration
-VITE_SUPABASE_URL=$SUPABASE_URL
-VITE_SUPABASE_ANON_KEY=$SUPABASE_KEY
+# ========================================
+# 4. INSTALAR CERTBOT
+# ========================================
+log "Instalando Certbot..."
 
-# Application Configuration
-VITE_APP_NAME=$APP_NAME
-VITE_APP_VERSION=1.0.0
-VITE_APP_ENV=production
-EOF
+if [[ "$OS" == *"Ubuntu"* ]] || [[ "$OS" == *"Debian"* ]]; then
+    sudo apt install -y certbot python3-certbot-nginx
+elif [[ "$OS" == *"CentOS"* ]] || [[ "$OS" == *"Red Hat"* ]]; then
+    sudo yum install -y certbot python3-certbot-nginx
+fi
 
-# 8. Instalar dependências e build
-log "Instalando dependências..."
-npm install
+# ========================================
+# 5. CONFIGURAR FIREWALL
+# ========================================
+log "Configurando firewall..."
 
-log "Fazendo build da aplicação..."
-npm run build
+if command -v ufw &> /dev/null; then
+    sudo ufw allow 22/tcp
+    sudo ufw allow 80/tcp
+    sudo ufw allow 443/tcp
+    sudo ufw --force enable
+    log "UFW configurado"
+elif command -v firewall-cmd &> /dev/null; then
+    sudo firewall-cmd --permanent --add-service=ssh
+    sudo firewall-cmd --permanent --add-service=http
+    sudo firewall-cmd --permanent --add-service=https
+    sudo firewall-cmd --reload
+    log "Firewalld configurado"
+else
+    warning "Nenhum firewall detectado. Configure manualmente as portas 22, 80 e 443"
+fi
 
-# 9. Copiar arquivos para servidor
-log "Copiando arquivos para servidor..."
-cp -r dist/* $APP_DIR/
+# ========================================
+# 6. CRIAR DIRETÓRIOS
+# ========================================
+log "Criando diretórios..."
 
-# 10. Configurar permissões
-log "Configurando permissões..."
-chown -R www-data:www-data $APP_DIR
-chmod -R 755 $APP_DIR
+sudo mkdir -p /opt/eralearn
+sudo chown $USER:$USER /opt/eralearn
+mkdir -p /opt/eralearn/{data,logs,ssl,nginx/conf.d}
 
-# 11. Configurar Nginx
-log "Configurando Nginx..."
+# ========================================
+# 7. CONFIGURAR LOGROTATE
+# ========================================
+log "Configurando logrotate..."
 
-# Criar configuração do site
-cat > /etc/nginx/sites-available/$NGINX_SITE << EOF
-server {
-    listen 80;
-    server_name $DOMAIN www.$DOMAIN;
-    root $APP_DIR;
-    index index.html;
-
-    # Gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "no-referrer-when-downgrade" always;
-    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
-
-    # Handle React Router
-    location / {
-        try_files \$uri \$uri/ /index.html;
-    }
-
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
+sudo tee /etc/logrotate.d/eralearn > /dev/null <<EOF
+/opt/eralearn/logs/*.log {
+    daily
+    missingok
+    rotate 30
+    compress
+    delaycompress
+    notifempty
+    create 644 $USER $USER
+    postrotate
+        docker-compose -f /opt/eralearn/docker-compose.prod.yml restart nginx-proxy
+    endscript
 }
 EOF
 
-# Ativar site
-ln -sf /etc/nginx/sites-available/$NGINX_SITE /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
-
-# Testar configuração
-if nginx -t; then
-    systemctl reload nginx
-    log "Nginx configurado com sucesso"
-else
-    error "Erro na configuração do Nginx"
-fi
-
-# 12. Instalar Certbot (SSL)
-log "Instalando Certbot para SSL..."
-apt install -y certbot python3-certbot-nginx
-
-# 13. Configurar firewall
-log "Configurando firewall..."
-ufw allow 'Nginx Full'
-ufw allow ssh
-ufw --force enable
-
-# 14. Criar scripts de manutenção
+# ========================================
+# 8. CRIAR SCRIPTS DE MANUTENÇÃO
+# ========================================
 log "Criando scripts de manutenção..."
 
-# Script de atualização
-cat > /usr/local/bin/update-eralearn << 'EOF'
-#!/bin/bash
-cd /tmp/eralearn
-git pull origin main
-cd pana-learn
-npm install
-npm run build
-cp -r dist/* /var/www/eralearn/
-chown -R www-data:www-data /var/www/eralearn
-systemctl reload nginx
-echo "ERA Learn atualizado com sucesso!"
-EOF
-
-chmod +x /usr/local/bin/update-eralearn
-
 # Script de backup
-cat > /usr/local/bin/backup-eralearn << 'EOF'
+cat > /opt/eralearn/backup.sh << 'EOF'
 #!/bin/bash
 DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/backup/eralearn"
+BACKUP_DIR="/opt/backups/eralearn"
+APP_DIR="/opt/eralearn"
+
 mkdir -p $BACKUP_DIR
-tar -czf $BACKUP_DIR/eralearn_$DATE.tar.gz /var/www/eralearn
-find $BACKUP_DIR -name "eralearn_*.tar.gz" -mtime +7 -delete
-echo "Backup criado: $BACKUP_DIR/eralearn_$DATE.tar.gz"
+
+# Backup dos dados
+tar -czf $BACKUP_DIR/eralearn_data_$DATE.tar.gz -C $APP_DIR data/
+
+# Backup da configuração
+tar -czf $BACKUP_DIR/eralearn_config_$DATE.tar.gz -C $APP_DIR .env docker-compose.prod.yml nginx/
+
+# Manter apenas os últimos 7 backups
+find $BACKUP_DIR -name "eralearn_*" -mtime +7 -delete
+
+echo "Backup concluído: $DATE"
 EOF
 
-chmod +x /usr/local/bin/backup-eralearn
+# Script de atualização
+cat > /opt/eralearn/update.sh << 'EOF'
+#!/bin/bash
+cd /opt/eralearn
 
-# 15. Configurar renovação automática de SSL
-log "Configurando renovação automática de SSL..."
+# Fazer backup antes da atualização
+./backup.sh
+
+# Parar serviços
+docker-compose -f docker-compose.prod.yml down
+
+# Atualizar código (se usando git)
+if [ -d ".git" ]; then
+    git pull origin main
+fi
+
+# Reconstruir e iniciar
+docker-compose -f docker-compose.prod.yml build
+docker-compose -f docker-compose.prod.yml up -d
+
+echo "Atualização concluída!"
+EOF
+
+# Script de monitoramento
+cat > /opt/eralearn/status.sh << 'EOF'
+#!/bin/bash
+echo "=== STATUS ERA LEARN ==="
+echo "Containers:"
+docker-compose -f docker-compose.prod.yml ps
+echo ""
+echo "Logs recentes:"
+docker-compose -f docker-compose.prod.yml logs --tail=10
+echo ""
+echo "Uso de recursos:"
+docker stats --no-stream
+EOF
+
+chmod +x /opt/eralearn/*.sh
+
+# ========================================
+# 9. CONFIGURAR CRON
+# ========================================
+log "Configurando tarefas agendadas..."
+
+# Adicionar renovação automática de SSL
 (crontab -l 2>/dev/null; echo "0 12 * * * /usr/bin/certbot renew --quiet") | crontab -
 
-# 16. Limpar arquivos temporários
-log "Limpando arquivos temporários..."
-rm -rf /tmp/eralearn
+# Adicionar backup diário
+(crontab -l 2>/dev/null; echo "0 2 * * * /opt/eralearn/backup.sh") | crontab -
 
-# 17. Verificar instalação
-log "Verificando instalação..."
+# ========================================
+# 10. FINALIZAÇÃO
+# ========================================
+log "Instalação concluída!"
 
-# Verificar se Nginx está rodando
-if systemctl is-active --quiet nginx; then
-    log "✅ Nginx está rodando"
-else
-    error "❌ Nginx não está rodando"
-fi
-
-# Verificar se os arquivos estão no lugar
-if [ -f "$APP_DIR/index.html" ]; then
-    log "✅ Arquivos da aplicação estão no lugar"
-else
-    error "❌ Arquivos da aplicação não encontrados"
-fi
-
-# Testar acesso local
-if curl -s -o /dev/null -w "%{http_code}" http://localhost | grep -q "200"; then
-    log "✅ Site está respondendo localmente"
-else
-    warning "⚠️ Site não está respondendo localmente"
-fi
-
-# Resumo da instalação
-echo -e "${GREEN}"
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║                    INSTALAÇÃO CONCLUÍDA!                    ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
-echo -e "${NC}"
-
-log "Resumo da instalação:"
-echo "🌐 Domínio: $DOMAIN"
-echo "📁 Diretório: $APP_DIR"
-echo "🔧 Nginx: /etc/nginx/sites-available/$NGINX_SITE"
-echo "📊 Logs: /var/log/nginx/"
 echo ""
-echo "📋 Próximos passos:"
-echo "1. Configure o DNS do domínio para apontar para este servidor"
-echo "2. Execute: sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN"
-echo "3. Teste o site: http://$DOMAIN"
+echo "=========================================="
+echo "🎉 ERA LEARN INSTALADO COM SUCESSO!"
+echo "=========================================="
 echo ""
-echo "🔧 Comandos úteis:"
-echo "- Atualizar: update-eralearn"
-echo "- Backup: backup-eralearn"
-echo "- Logs Nginx: tail -f /var/log/nginx/access.log"
-echo "- Status: systemctl status nginx"
+echo "Próximos passos:"
+echo "1. Copie os arquivos da aplicação para /opt/eralearn/"
+echo "2. Configure o arquivo .env com suas variáveis"
+echo "3. Configure o domínio no nginx/conf.d/eralearn.conf"
+echo "4. Execute: cd /opt/eralearn && docker-compose -f docker-compose.prod.yml up -d"
+echo "5. Configure o certificado SSL com: sudo certbot --nginx -d seudominio.com"
+echo ""
+echo "Comandos úteis:"
+echo "- Status: /opt/eralearn/status.sh"
+echo "- Backup: /opt/eralearn/backup.sh"
+echo "- Atualizar: /opt/eralearn/update.sh"
+echo "- Logs: docker-compose -f docker-compose.prod.yml logs -f"
+echo ""
+echo "⚠️  IMPORTANTE: Faça logout e login novamente para usar Docker sem sudo"
+echo ""
 
-log "Instalação concluída com sucesso! 🚀"
+# Verificar se precisa fazer logout
+if ! groups | grep -q docker; then
+    warning "Você precisa fazer logout e login novamente para usar Docker sem sudo"
+fi

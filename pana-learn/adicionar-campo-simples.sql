@@ -33,3 +33,34 @@ SELECT 'Agora execute o script sistema-quiz-admin-completo.sql' as proximo_passo
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

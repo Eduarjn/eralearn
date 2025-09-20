@@ -184,3 +184,34 @@ O problema estava na **inconsistência entre os IDs** do `auth.users` e da tabel
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

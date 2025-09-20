@@ -106,3 +106,34 @@ SELECT 'Agora execute o script sistema-quiz-admin-completo.sql novamente' as pro
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
