@@ -25,15 +25,8 @@ const Dashboard = () => {
     const isAdmin = userProfile?.tipo_usuario === "admin"
     const featuredCourses = courses
 
-    if (import.meta.env.DEV) {
-        console.log("Dashboard - Estado dos cursos:", {
-            coursesLoading,
-            coursesError,
-            coursesCount: courses.length,
-            isAdmin,
-            userProfile: userProfile?.email,
-            userType: userProfile?.tipo_usuario,
-        })
+    if (import.meta.env.DEV && coursesError) {
+        console.error("Dashboard - Error loading courses:", coursesError)
     }
 
     const handleStartCourse = (courseId: string) => {
@@ -50,7 +43,6 @@ const Dashboard = () => {
         if (import.meta.env.DEV) {
             console.log("Testing course loading...")
             console.log("Courses loaded:", courses.length)
-            console.log("Course data:", courses)
             console.log("Categories:", categories)
             console.log("User:", userProfile?.email, "Type:", userProfile?.tipo_usuario)
 

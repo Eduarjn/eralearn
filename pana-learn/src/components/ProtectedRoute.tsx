@@ -15,14 +15,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     const location = useLocation()
     const { user, userProfile, loading } = useAuth()
 
-    if (import.meta.env.DEV) {
-        console.log("ProtectedRoute - Estado:", {
-            user: user?.email,
-            userProfile: userProfile?.nome,
-            loading,
-            pathname: location.pathname,
-            status: user ? "authenticated" : "unauthenticated",
-        })
+    // Only log authentication errors or important state changes
+    if (import.meta.env.DEV && !loading && !user && !userProfile) {
+        console.log("ProtectedRoute - User not authenticated, showing login form")
     }
 
     if (loading) {

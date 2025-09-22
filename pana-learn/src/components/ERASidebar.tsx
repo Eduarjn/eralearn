@@ -13,24 +13,17 @@ import {
     ChevronDown,
     Globe,
     Zap,
-    Pin,
-    PinOff,
+    User,
+    ChevronRight,
+    Plus,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { NavLink, useNavigate, useLocation } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
 import { useBranding } from "@/context/BrandingContext"
-import { useState, useRef, useEffect, useCallback } from "react"
-import { useHoverIntent } from "@/hooks/useHoverIntent"
+import { useState, useRef, useCallback } from "react"
 import { useResponsive } from "@/hooks/useResponsive"
-import {
-    getSidebarState,
-    setSidebarState,
-    getSidebarWidth,
-    isPointerNear,
-    isTouchDevice as isTouchDeviceUtil,
-} from "@/lib/sidebar-utils"
 
 const menuItems = [
     { title: "Dashboard", icon: Home, path: "/dashboard", roles: ["admin", "cliente", "admin_master"] },
@@ -86,9 +79,9 @@ function SidebarItem({
     return (
         <div>
             <button
-                className={`w-full flex items-center justify-between text-left text-xs lg:text-sm p-2 lg:p-3 rounded-lg transition-all duration-200 ${
-                    isAnySubmenuActive ? "text-era-green bg-white/10" : "text-white hover:bg-white/10"
-                }`}
+                className={`group w-full flex items-center justify-between text-left transition-all duration-200 ease-out rounded-lg ${
+                    isExpanded ? "p-3" : "p-3 justify-center"
+                } ${isAnySubmenuActive ? "bg-[#CCFF00]/20 text-white" : "text-gray-300 hover:bg-white/10 hover:text-white"}`}
                 onClick={() => {
                     if (isExpanded) {
                         setOpen((v) => !v)
@@ -97,28 +90,23 @@ function SidebarItem({
                     }
                 }}
                 type="button"
-                style={{ background: "none" }}
             >
-        <span className="flex items-center gap-2 lg:gap-3">
-          <Icon
-              className={`h-4 w-4 lg:h-5 lg:w-5 flex-shrink-0 ${isAnySubmenuActive ? "text-era-green" : "text-white"}`}
-          />
+        <span className="flex items-center gap-3">
+          <Icon className="h-5 w-5" />
           <span
-              className={`${isAnySubmenuActive ? "text-era-green" : "text-white"} truncate transition-all duration-200 ${
-                  isExpanded ? "opacity-100 translate-x-0" : "opacity-0 translate-x-1"
+              className={`font-medium transition-all duration-200 ${
+                  isExpanded ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2 absolute"
               }`}
           >
             {label}
           </span>
         </span>
-                <ChevronDown
-                    className={`transition-transform duration-200 ${open ? "rotate-180" : ""} h-3 w-3 lg:h-4 lg:w-4 ${
-                        isAnySubmenuActive ? "text-era-green" : "text-white"
-                    } transition-all duration-200 ${isExpanded ? "opacity-100" : "opacity-0"}`}
-                />
+                {isExpanded && (
+                    <ChevronDown className={`transition-all duration-200 ${open ? "rotate-180" : ""} h-4 w-4 text-gray-400`} />
+                )}
             </button>
             {open && isExpanded && (
-                <div className="pl-6 lg:pl-8 mt-1 space-y-1">
+                <div className="ml-6 mt-2 space-y-1 bg-black/30 rounded-lg p-2">
                     {visibleSubmenu.map((item) => {
                         const isSpecialActive =
                             item.path === "/configuracoes/preferencias" && location.pathname === "/configuracoes"
@@ -127,10 +115,10 @@ function SidebarItem({
                                 key={item.path}
                                 to={item.path}
                                 className={({ isActive }) =>
-                                    `w-full block text-left text-xs lg:text-sm p-1.5 lg:p-2 rounded-md transition-all duration-200 ${
+                                    `block text-sm p-2 rounded-md transition-all duration-200 ${
                                         isActive || isSpecialActive
-                                            ? "text-era-green font-medium bg-white/10"
-                                            : "text-white/80 hover:text-era-green hover:bg-white/10"
+                                            ? "text-white bg-[#CCFF00]/20 font-medium"
+                                            : "text-gray-400 hover:text-white hover:bg-white/10"
                                     }`
                                 }
                             >
@@ -152,152 +140,68 @@ export function ERASidebar() {
     const { isDesktop, isLargeDesktop } = useResponsive()
     const sidebarRef = useRef<HTMLDivElement>(null)
 
-    // Estados da sidebar
-    const [sidebarState, setSidebarStateLocal] = useState<"collapsed" | "expanded" | "pinned">(getSidebarState)
-    const [isHovering, setIsHovering] = useState(false)
-    const [hoveredItem, setHoveredItem] = useState<string | null>(null)
-    const [isTouchDevice, setIsTouchDevice] = useState(false)
-
-    // Função para atualizar estado e salvar no localStorage
-    const updateSidebarState = useCallback((newState: "collapsed" | "expanded" | "pinned") => {
-        setSidebarStateLocal(newState)
-        setSidebarState(newState)
-    }, [])
-
-    // Hook para detectar intenção de hover (apenas desktop)
-    const { isHovered, handleMouseEnter, handleMouseLeave } = useHoverIntent({
-        openDelay: 200,
-        closeDelay: 500,
-        onEnter: () => {
-            if (!isTouchDevice && sidebarState === "collapsed" && (isDesktop || isLargeDesktop)) {
-                updateSidebarState("expanded")
-            }
-        },
-        onLeave: () => {
-            if (!isTouchDevice && sidebarState === "expanded" && (isDesktop || isLargeDesktop)) {
-                updateSidebarState("collapsed")
-            }
-        },
-    })
-
-    // Detectar dispositivo touch
-    useEffect(() => {
-        setIsTouchDevice(isTouchDeviceUtil())
-    }, [])
-
-    // Gerenciar estado da sidebar
-    useEffect(() => {
-        updateSidebarState(getSidebarState())
-    }, [updateSidebarState])
+    const [isExpanded, setIsExpanded] = useState(false)
 
     const handleSignOut = async () => {
         await signOut()
     }
 
-    const togglePin = useCallback(() => {
-        const newState = sidebarState === "pinned" ? "collapsed" : "pinned"
-        updateSidebarState(newState)
-    }, [sidebarState, updateSidebarState])
-
     const handleItemClick = useCallback(
         (path: string) => {
-            // Em dispositivos touch ou mobile, não expandir/colapsar automaticamente
-            // Apenas navegar
             navigate(path)
         },
         [navigate],
     )
 
-    const handleMouseMove = useCallback(
-        (event: MouseEvent) => {
-            if (sidebarRef.current && sidebarState === "collapsed") {
-                const isNear = isPointerNear(sidebarRef.current, event, 32)
-                setIsHovering(isNear)
-            }
-        },
-        [sidebarState],
-    )
-
-    useEffect(() => {
-        // Apenas adicionar listener de mouse em desktop
-        if (!isTouchDevice && (isDesktop || isLargeDesktop)) {
-            document.addEventListener("mousemove", handleMouseMove)
-            return () => document.removeEventListener("mousemove", handleMouseMove)
-        }
-    }, [isTouchDevice, isDesktop, isLargeDesktop, handleMouseMove])
-
     const visibleMenuItems = menuItems.filter((item) =>
         userProfile?.tipo_usuario ? item.roles.includes(userProfile.tipo_usuario) : item.roles.includes("cliente"),
     )
 
-    const sidebarWidth = getSidebarWidth(sidebarState)
-    const isExpanded = sidebarState === "expanded" || sidebarState === "pinned"
-
     return (
         <div
             ref={sidebarRef}
-            className={`flex flex-col h-full bg-gray-900 text-white min-h-screen transition-[width] duration-200 ease-in-out ${
-                isExpanded ? "shadow-lg" : "shadow-sm"
+            className={`fixed left-0 top-0 z-50 flex flex-col h-full min-h-screen transition-all duration-300 ease-out ${
+                isExpanded ? "w-80" : "w-20"
             }`}
-            style={{ width: `${sidebarWidth}px` }}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
+            style={{
+                background: "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)",
+                backdropFilter: "blur(20px)",
+                borderRight: "1px solid rgba(204, 255, 0, 0.1)",
+            }}
+            onMouseEnter={() => setIsExpanded(true)}
+            onMouseLeave={() => setIsExpanded(false)}
             aria-expanded={isExpanded}
         >
-            {/* Logo ERA Learn */}
-            <div className="relative">
-                <img
-                    src="/images/era-learn-logo.png"
-                    alt="ERA Learn Logo"
-                    id="sidebar-logo"
-                    className={`object-contain logo-rounded cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg ${
-                        isExpanded ? "h-20 lg:h-24" : "h-16"
-                    }`}
-                    style={{
-                        borderRadius: "12px",
-                        width: isExpanded ? "100%" : "48px",
-                        margin: isExpanded ? "0" : "0 auto",
-                    }}
-                    onClick={() => window.open("https://era.com.br/", "_blank")}
-                    onError={(e) => {
-                        const target = e.currentTarget
-                        if (target.src.includes("/images/era-learn-logo.png")) {
-                            target.src = "/logo/eralearn.png"
-                        } else if (target.src.includes("/logo/eralearn.png")) {
-                            target.src = "/logotipoeralearn.svg"
-                        } else {
-                            target.src = "/placeholder.svg?height=80&width=200&text=ERA+LEARN"
-                        }
-                    }}
-                    onLoad={() => {}}
-                    title="Clique para visitar o site ERA"
-                />
-
-                {/* Botão de fixar */}
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`absolute top-2 right-2 p-1 h-6 w-6 text-gray-400 hover:text-white transition-all duration-200 ${
-                        isExpanded ? "opacity-100" : "opacity-0"
-                    }`}
-                    onClick={togglePin}
-                    title={sidebarState === "pinned" ? "Desafixar" : "Fixar"}
-                >
-                    {sidebarState === "pinned" ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
-                </Button>
-
-                {isExpanded && (
-                    <div className="flex items-center justify-center py-2">
-                        <p className="text-xs text-gray-400">Smart Training</p>
-                    </div>
-                )}
+            <div className="flex gap-2 p-4 mb-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
             </div>
 
-            {/* Navigation */}
-            <nav className="flex-1 p-2 lg:p-4 space-y-0.5 lg:space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-                <ul className="flex flex-col gap-0.5 lg:gap-1">
+            <div className="p-4 border-b border-white/10">
+                <div className={`flex items-center gap-3 transition-all duration-300 ${!isExpanded && "justify-center"}`}>
+                    <div className="w-10 h-10 bg-[#CCFF00] rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-black font-bold text-lg">E</span>
+                    </div>
+                    {isExpanded && (
+                        <div className="flex-1">
+                            <p className="text-xs text-gray-400 uppercase tracking-wide">Plataforma de Ensino</p>
+                            <p className="text-white font-medium">ERA Learn</p>
+                        </div>
+                    )}
+                    {isExpanded && <ChevronRight className="w-4 h-4 text-gray-400" />}
+                </div>
+            </div>
+
+            <div className="flex-1 px-4 py-6">
+                {isExpanded && (
+                    <div className="mb-4">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">MAIN</p>
+                    </div>
+                )}
+
+                <nav className="space-y-2">
                     {visibleMenuItems.map((item) => {
-                        // Se o item tem submenu, usar SidebarItem
                         if (item.submenu) {
                             return (
                                 <SidebarItem
@@ -312,67 +216,81 @@ export function ERASidebar() {
                             )
                         }
 
-                        // Se não tem submenu, renderizar normalmente
                         const isActive = location.pathname === item.path
 
                         return (
-                            <li key={item.path} className="relative">
-                                <Button
-                                    variant="ghost"
-                                    className={`w-full justify-start text-left text-xs lg:text-sm p-1.5 lg:p-2.5 rounded-lg transition-all duration-200 ${
-                                        isActive ? "bg-era-green text-white font-semibold" : "text-white hover:bg-white/10"
-                                    }`}
-                                    onClick={() => handleItemClick(item.path)}
-                                >
-                                    <item.icon
-                                        className={`mr-2 lg:mr-3 h-4 w-4 lg:h-5 lg:w-5 flex-shrink-0 ${isActive ? "text-white" : "text-white"}`}
-                                    />
-                                    <span
-                                        className={`${isActive ? "text-white" : "text-white"} truncate transition-all duration-200 ${
-                                            isExpanded ? "opacity-100 translate-x-0" : "opacity-0 translate-x-1"
-                                        }`}
-                                    >
-                    {item.title}
-                  </span>
-                                </Button>
-                            </li>
+                            <Button
+                                key={item.path}
+                                variant="ghost"
+                                className={`group w-full transition-all duration-200 ease-out rounded-lg ${
+                                    isActive
+                                        ? "bg-slate-700/50 text-white font-semibold border border-[#CCFF00]/30"
+                                        : "text-gray-300 hover:bg-slate-700/30 hover:text-white"
+                                } ${isExpanded ? "justify-start p-3" : "justify-center p-3"}`}
+                                onClick={() => handleItemClick(item.path)}
+                            >
+                                <item.icon className="h-5 w-5" />
+                                {isExpanded && <span className="ml-3 font-medium">{item.title}</span>}
+                            </Button>
                         )
                     })}
-                </ul>
-            </nav>
+                </nav>
+            </div>
 
-            {/* User section */}
-            <div className="p-3 lg:p-4">
-                <div
-                    className={`flex items-center space-x-2 lg:space-x-3 mb-2 lg:mb-3 ${
-                        isExpanded ? "opacity-100" : "opacity-0"
-                    } transition-opacity duration-200`}
-                >
-                    <div className="w-6 h-6 lg:w-8 lg:h-8 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-xs lg:text-sm font-medium text-white">
-              {userProfile?.nome ? userProfile.nome.charAt(0).toUpperCase() : "U"}
-            </span>
+            <div className="p-4 space-y-4">
+                {/* User Profile Section */}
+                <div className={`flex items-center gap-3 transition-all duration-300 ${!isExpanded && "justify-center"}`}>
+                    <div className="w-8 h-8 bg-[#CCFF00]/20 rounded-full flex items-center justify-center flex-shrink-0">
+                        <User className="h-4 w-4 text-[#CCFF00]" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                        <p className="text-xs lg:text-sm font-medium text-white truncate">{userProfile?.nome || "Usuário"}</p>
-                        <p className="text-xs text-gray-400 truncate">
-                            {userProfile?.tipo_usuario === "admin" ? "Administrador" : "Cliente"}
-                        </p>
-                    </div>
+                    {isExpanded && (
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs text-gray-400 uppercase tracking-wide">
+                                {userProfile?.tipo_usuario === "admin" ? "Administrador" : "Cliente"}
+                            </p>
+                            <p className="text-white font-medium truncate">{userProfile?.nome || "Usuário"}</p>
+                        </div>
+                    )}
                 </div>
+
+                {/* Let's start section */}
+                {isExpanded && (
+                    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                        <h3 className="text-white font-semibold mb-2">Let's start!</h3>
+                        <p className="text-gray-400 text-sm mb-4">Creating or adding new tasks couldn't be easier</p>
+                        <Button
+                            className="w-full bg-[#CCFF00] hover:bg-[#CCFF00]/90 text-black font-semibold"
+                            onClick={() => navigate("/treinamentos")}
+                        >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add New Task
+                        </Button>
+                    </div>
+                )}
+
+                {/* Collapsed state add button */}
+                {!isExpanded && (
+                    <div className="flex justify-center">
+                        <Button
+                            size="sm"
+                            className="bg-[#CCFF00] hover:bg-[#CCFF00]/90 text-black w-10 h-10 p-0"
+                            onClick={() => navigate("/treinamentos")}
+                        >
+                            <Plus className="w-4 h-4" />
+                        </Button>
+                    </div>
+                )}
+
+                {/* Exit Button */}
                 <Button
                     variant="ghost"
-                    className="w-full justify-start text-white hover:bg-white/10 text-xs lg:text-sm p-2 lg:p-3"
+                    className={`group w-full transition-all duration-200 ease-out text-gray-300 hover:bg-red-500/20 hover:text-red-400 rounded-lg ${
+                        isExpanded ? "justify-start p-3" : "justify-center p-3"
+                    }`}
                     onClick={handleSignOut}
                 >
-                    <LogOut className="mr-2 lg:mr-3 h-3 w-3 lg:h-4 lg:w-4" />
-                    <span
-                        className={`truncate transition-all duration-200 ${
-                            isExpanded ? "opacity-100 translate-x-0" : "opacity-0 translate-x-1"
-                        }`}
-                    >
-            Sair
-          </span>
+                    <LogOut className="h-4 w-4" />
+                    {isExpanded && <span className="ml-3 font-medium">Sair</span>}
                 </Button>
             </div>
         </div>
