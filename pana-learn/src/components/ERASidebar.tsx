@@ -92,17 +92,19 @@ function SidebarItem({
                 type="button"
             >
         <span className="flex items-center gap-3">
-          <Icon className={`h-5 w-5 ${isAnySubmenuActive ? 'text-era-green' : 'text-era-white'}`} />
+          <Icon className={`h-5 w-5 ${isAnySubmenuActive ? "text-era-green" : "text-era-white"}`} />
           <span
               className={`font-medium transition-all duration-200 ${
                   isExpanded ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2 absolute"
-              } ${isAnySubmenuActive ? 'text-era-green' : 'text-era-white'}`}
+              } ${isAnySubmenuActive ? "text-era-green" : "text-era-white"}`}
           >
             {label}
           </span>
         </span>
                 {isExpanded && (
-                    <ChevronDown className={`transition-all duration-200 ${open ? "rotate-180" : ""} h-4 w-4 ${isAnySubmenuActive ? 'text-era-green' : 'text-era-white/60'}`} />
+                    <ChevronDown
+                        className={`transition-all duration-200 ${open ? "rotate-180" : ""} h-4 w-4 ${isAnySubmenuActive ? "text-era-green" : "text-era-white/60"}`}
+                    />
                 )}
             </button>
             {open && isExpanded && (
@@ -193,7 +195,7 @@ export function ERASidebar() {
                 </div>
             </div>
 
-            <div className="flex-1 px-4 py-6">
+            <div className="flex-1 px-4 py-6 overflow-y-auto">
                 {isExpanded && (
                     <div className="mb-4">
                         <p className="text-xs font-semibold text-era-white/60 uppercase tracking-wider mb-2">MAIN</p>
@@ -229,15 +231,19 @@ export function ERASidebar() {
                                 } ${isExpanded ? "justify-start p-3" : "justify-center p-3"}`}
                                 onClick={() => handleItemClick(item.path)}
                             >
-                                <item.icon className={`h-5 w-5 ${isActive ? 'text-era-black' : 'text-era-white'}`} />
-                                {isExpanded && <span className={`ml-3 font-medium ${isActive ? 'text-era-black' : 'text-era-white'}`}>{item.title}</span>}
+                                <item.icon className={`h-5 w-5 ${isActive ? "text-era-black" : "text-era-white"}`} />
+                                {isExpanded && (
+                                    <span className={`ml-3 font-medium ${isActive ? "text-era-black" : "text-era-white"}`}>
+                    {item.title}
+                  </span>
+                                )}
                             </Button>
                         )
                     })}
                 </nav>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-4 mt-auto">
                 {/* User Profile Section */}
                 <div className={`flex items-center gap-3 transition-all duration-300 ${!isExpanded && "justify-center"}`}>
                     <div className="w-8 h-8 bg-era-green/20 rounded-full flex items-center justify-center flex-shrink-0">
