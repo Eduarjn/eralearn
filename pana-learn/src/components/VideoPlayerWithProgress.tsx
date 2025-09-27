@@ -2,13 +2,14 @@
 
 import type React from "react"
 import { useRef, useEffect, useState } from "react"
-import { CheckCircle, Play, Pause, Maximize2 } from "lucide-react"
+import { CheckCircle, Play, Pause, Maximize2, SkipForward } from "lucide-react"
 import { useVideoProgress } from "@/hooks/useVideoProgress"
 import { useSignedMediaUrl } from "@/hooks/useSignedMediaUrl"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { YouTubePlayerWithProgress } from "./YouTubePlayerWithProgress"
 
 interface VideoPlayerWithProgressProps {
@@ -28,6 +29,11 @@ interface VideoPlayerWithProgressProps {
     totalVideos?: number
     completedVideos?: number
     className?: string
+    nextVideo?: {
+        id: string
+        titulo: string
+    }
+    onNextVideo?: () => void
 }
 
 export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = ({
@@ -40,6 +46,8 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
                                                                                     totalVideos,
                                                                                     completedVideos,
                                                                                     className = "",
+                                                                                    nextVideo,
+                                                                                    onNextVideo,
                                                                                 }) => {
     const videoRef = useRef<HTMLVideoElement>(null)
     const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -47,10 +55,19 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
     const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)
     const [showCompletionBadge, setShowCompletionBadge] = useState(false)
-    const [completionChecked, setCompletionChecked] = useState(false) // Nova variável para evitar chamadas repetidas
+    const [completionChecked, setCompletionChecked] = useState(false)
+    const [shouldAutoPlay, setShouldAutoPlay] = useState(false)
+    const [showCompletionPopup, setShowCompletionPopup] = useState(false)
+    const [countdown, setCountdown] = useState(3)
+    const [showRewatchDialog, setShowRewatchDialog] = useState(false)
 
     const { toast } = useToast()
-    const { progress, saveProgress, markAsCompleted } = useVideoProgress(userId, video.id, cursoId, moduloId)
+    const { progress, saveProgress, markAsCompleted, checkRewatch, wasCompleted } = useVideoProgress(
+        userId,
+        video.id,
+        cursoId,
+        moduloId,
+    )
 
     // Detectar se é vídeo do YouTube ou vídeo problemático (definir antes de usar)
     const isYouTube = video.url_video.includes("youtube.com") || video.url_video.includes("youtu.be")
@@ -77,6 +94,21 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
     const finalIsYouTube = isYouTube || isProblematicVideo
     const finalVideoUrl = isProblematicVideo ? "https://www.youtube.com/watch?v=dQw4w9WgXcQ" : video.url_video
     const youtubeVideoId = finalIsYouTube ? extractYouTubeVideoId(finalVideoUrl) : ""
+
+    useEffect(() => {
+        if (wasCompleted && !finalIsYouTube) {
+            setShowRewatchDialog(true)
+        }
+    }, [wasCompleted, finalIsYouTube])
+
+    const handleRewatchConfirm = (confirmed: boolean) => {
+        setShowRewatchDialog(false)
+        if (!confirmed) {
+            if (onNextVideo && nextVideo) {
+                onNextVideo()
+            }
+        }
+    }
 
     const detectYouTube = () => {
         if (isYouTube) {
@@ -127,23 +159,29 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
             const time = videoElement.currentTime
             const videoDuration = videoElement.duration || duration
 
+            if (!Number.isFinite(time) || !Number.isFinite(videoDuration) || videoDuration <= 0) {
+                return
+            }
+
             setCurrentTime(time)
             setDuration(videoDuration)
 
-            // Salvar progresso a cada 5 segundos
-            if (Math.floor(time) % 5 === 0 && Math.floor(time) !== Math.floor(progress.tempoAssistido)) {
-                saveProgress(time, videoDuration)
-            }
+            if (!wasCompleted) {
+                // Salvar progresso a cada 5 segundos
+                if (Math.floor(time) % 5 === 0 && Math.floor(time) !== Math.floor(progress.tempoAssistido)) {
+                    saveProgress(time, videoDuration)
+                }
 
-            // Verificar se chegou ao fim do vídeo (90% ou mais) - apenas uma vez
-            if (videoDuration > 0 && time >= videoDuration * 0.9 && !progress.concluido && !completionChecked) {
-                setCompletionChecked(true) // Marcar como verificado
-                handleVideoCompletion()
+                // Verificar se chegou ao fim do vídeo (90% ou mais) - apenas uma vez
+                if (time >= videoDuration * 0.9 && !progress.concluido && !completionChecked) {
+                    setCompletionChecked(true)
+                    handleVideoCompletion()
+                }
             }
 
             // Notificar mudança de progresso
             if (onProgressChange) {
-                const progressPercent = videoDuration > 0 ? (time / videoDuration) * 100 : 0
+                const progressPercent = (time / videoDuration) * 100
                 onProgressChange(progressPercent)
             }
         }
@@ -160,6 +198,7 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
         saveProgress,
         onProgressChange,
         completionChecked,
+        wasCompleted,
     ])
 
     // Eventos de fim do vídeo
@@ -171,20 +210,21 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
 
         const handleEnded = () => {
             setIsPlaying(false)
-            if (!completionChecked) {
+            if (!completionChecked && !wasCompleted) {
                 setCompletionChecked(true)
                 handleVideoCompletion()
             }
+            setShouldAutoPlay(true)
         }
 
         videoElement.addEventListener("ended", handleEnded)
         return () => {
             videoElement.removeEventListener("ended", handleEnded)
         }
-    }, [isYouTube, completionChecked])
+    }, [isYouTube, completionChecked, wasCompleted])
 
     const handleVideoCompletion = async () => {
-        if (progress.concluido) return
+        if (progress.concluido || wasCompleted) return
 
         try {
             await markAsCompleted()
@@ -196,22 +236,38 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
                 variant: "default",
             })
 
+            if (nextVideo && onNextVideo) {
+                setShowCompletionPopup(true)
+                setCountdown(3)
+
+                const countdownInterval = setInterval(() => {
+                    setCountdown((prev) => {
+                        if (prev <= 1) {
+                            clearInterval(countdownInterval)
+                            setShowCompletionPopup(false)
+                            onNextVideo()
+                            return 0
+                        }
+                        return prev - 1
+                    })
+                }, 1000)
+            }
+
             // Verificar se é o último vídeo da categoria
             if (onProgressChange) {
-                onProgressChange(100) // Notificar que o vídeo foi concluído
+                onProgressChange(100)
             }
 
             // Verificar se o curso foi completamente concluído
             if (onCourseComplete && totalVideos && completedVideos !== undefined) {
                 const newCompletedCount = completedVideos + 1
-                console.log(`🎯 Vídeo concluído! ${newCompletedCount}/${totalVideos}`)
+                console.log(`Vídeo concluído! ${newCompletedCount}/${totalVideos}`)
 
                 if (newCompletedCount >= totalVideos) {
-                    // Curso completamente concluído - chamar imediatamente
-                    console.log("🎯 Último vídeo concluído! Chamando onCourseComplete...")
+                    console.log("Último vídeo concluído! Chamando onCourseComplete...")
                     setTimeout(() => {
                         onCourseComplete(cursoId)
-                    }, 1000) // Delay para garantir que o progresso foi salvo
+                    }, 1000)
                 }
             }
 
@@ -264,7 +320,10 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
         return `${mins}:${secs.toString().padStart(2, "0")}`
     }
 
-    const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
+    const progressPercent =
+        duration > 0 && Number.isFinite(currentTime) && Number.isFinite(duration)
+            ? Math.min((currentTime / duration) * 100, 100)
+            : 0
 
     // Se for vídeo do YouTube ou problemático, usar o componente especializado
     if (finalIsYouTube) {
@@ -279,6 +338,8 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
                 totalVideos={totalVideos}
                 completedVideos={completedVideos}
                 className={className}
+                nextVideo={nextVideo}
+                onNextVideo={onNextVideo}
             />
         )
     }
@@ -319,6 +380,7 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
                                 controls={false}
                                 onPlay={() => setIsPlaying(true)}
                                 onPause={() => setIsPlaying(false)}
+                                autoPlay={shouldAutoPlay}
                             />
                         )}
                     </>
@@ -332,6 +394,7 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
                         controls={false}
                         onPlay={() => setIsPlaying(true)}
                         onPause={() => setIsPlaying(false)}
+                        autoPlay={shouldAutoPlay}
                     />
                 )}
 
@@ -393,6 +456,79 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
                     )}
                 </div>
             </div>
+
+            <Dialog open={showCompletionPopup} onOpenChange={setShowCompletionPopup}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            Vídeo Concluído!
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="text-center py-4">
+                        <p className="mb-4">Parabéns! Você concluiu "{video.titulo}".</p>
+                        {nextVideo && (
+                            <div className="bg-blue-50 p-4 rounded-lg mb-4">
+                                <p className="text-sm text-gray-600 mb-2">Próximo vídeo:</p>
+                                <p className="font-semibold">{nextVideo.titulo}</p>
+                                <p className="text-sm text-blue-600 mt-2">Iniciando em {countdown} segundos...</p>
+                                <div className="w-full bg-blue-200 rounded-full h-2 mt-2">
+                                    <div
+                                        className="bg-blue-600 h-2 rounded-full transition-all duration-1000"
+                                        style={{ width: `${((3 - countdown) / 3) * 100}%` }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter className="flex gap-2">
+                        <Button variant="outline" onClick={() => setShowCompletionPopup(false)}>
+                            Ficar aqui
+                        </Button>
+                        {nextVideo && onNextVideo && (
+                            <Button
+                                onClick={() => {
+                                    setShowCompletionPopup(false)
+                                    onNextVideo()
+                                }}
+                                className="bg-blue-600 hover:bg-blue-700"
+                            >
+                                <SkipForward className="h-4 w-4 mr-2" />
+                                Próximo vídeo
+                            </Button>
+                        )}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showRewatchDialog} onOpenChange={setShowRewatchDialog}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            Vídeo já concluído
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="text-center py-4">
+                        <div className="bg-green-50 p-4 rounded-lg mb-4">
+                            <p className="text-sm text-green-800 mb-2">
+                                Você já concluiu este vídeo em{" "}
+                                {progress.dataConclusao ? new Date(progress.dataConclusao).toLocaleDateString() : "uma data anterior"}.
+                            </p>
+                            <p className="text-sm text-green-600">Progresso: 100% completo</p>
+                        </div>
+                        <p className="mb-4">Deseja realmente assistir novamente?</p>
+                    </div>
+                    <DialogFooter className="flex gap-2">
+                        <Button variant="outline" onClick={() => handleRewatchConfirm(false)}>
+                            {nextVideo ? "Ir para próximo" : "Não, voltar"}
+                        </Button>
+                        <Button onClick={() => handleRewatchConfirm(true)} className="bg-green-600 hover:bg-green-700">
+                            Sim, assistir novamente
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Loading state */}
             {progress.loading && (

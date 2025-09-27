@@ -21,7 +21,6 @@ import { EnhancedQuizModal } from "@/components/EnhancedQuizModal"
 import { QuizCompletionNotification } from "@/components/QuizCompletionNotification"
 import { useEnhancedQuiz } from "@/hooks/useEnhancedQuiz"
 
-// Adicionar tipo auxiliar para vídeo com modulo_id e categoria
 type VideoWithModulo = Database["public"]["Tables"]["videos"]["Row"] & {
     modulo_id?: string
     categoria?: string
@@ -65,7 +64,6 @@ const ModuleEditForm = ({ modulo, onSaved }: { modulo: Module; onSaved: () => vo
     )
 }
 
-// Helper para pegar o link do vídeo
 function getVideoUrl(item: Module | { url_video?: string; link_video?: string }) {
     if ("link_video" in item && item.link_video) return item.link_video
     if ("url_video" in item && item.url_video) return item.url_video
@@ -85,7 +83,6 @@ const CursoDetalhe = () => {
     const userId = userProfile?.id
     const navigate = useNavigate()
 
-    // Debug logs apenas em desenvolvimento
     if (process.env.NODE_ENV === "development") {
         console.log("🎯 CursoDetalhe - Componente carregado")
         console.log("🎯 CursoDetalhe - ID recebido:", id)
@@ -103,6 +100,7 @@ const CursoDetalhe = () => {
     const [showQuizNotification, setShowQuizNotification] = React.useState(false)
     const [showQuizModal, setShowQuizModal] = React.useState(false)
     const [refresh, setRefresh] = React.useState(0)
+    const [progressRefresh, setProgressRefresh] = React.useState(0)
 
     const [editingModuleId, setEditingModuleId] = React.useState<string | null>(null)
     const [editTitle, setEditTitle] = React.useState("")
@@ -118,10 +116,8 @@ const CursoDetalhe = () => {
     const currentCategory = currentCourseData?.categoria
     const { data: modules = [] } = useCourseModules(id || "")
 
-    // Hook para gerenciar quiz opcional (não interfere no fluxo atual)
     const { quizState, loading: quizLoading, checkCourseCompletion } = useOptionalQuiz(id || "")
 
-    // Hook para gerenciar quiz
     const {
         quizConfig,
         certificate,
@@ -133,17 +129,14 @@ const CursoDetalhe = () => {
         checkQuizAvailability,
     } = useEnhancedQuiz(userId, id)
 
-    // Hook para gerenciar certificados
     const { generateCertificate } = useCertificates(userId)
 
-    // Calcular progresso do curso
     const calculateCourseProgress = useCallback(async () => {
         if (!id || !userId) return
 
         try {
-            console.log("Calculando progresso do curso:", { courseId: id, userId })
+            console.log("🔄 Calculating course progress:", { courseId: id, userId })
 
-            // Buscar todos os vídeos do curso
             const { data: allVideos } = await supabase
                 .from("videos")
                 .select("id, titulo, duracao")
@@ -151,7 +144,7 @@ const CursoDetalhe = () => {
                 .order("data_criacao")
 
             if (!allVideos || allVideos.length === 0) {
-                console.log("Nenhum vídeo encontrado para o curso")
+                console.log("No videos found for course")
                 setTotalVideos(0)
                 setCompletedVideos(0)
                 return
@@ -159,9 +152,8 @@ const CursoDetalhe = () => {
 
             const total = allVideos.length
             setTotalVideos(total)
-            console.log(`Total de vídeos no curso: ${total}`)
+            console.log(`Total videos in course: ${total}`)
 
-            // Buscar progresso dos vídeos
             const videoIds = allVideos.map((v) => v.id)
             const { data: progressData } = await supabase
                 .from("video_progress")
@@ -174,119 +166,27 @@ const CursoDetalhe = () => {
                     (p) => p.concluido === true || (p.percentual_assistido && p.percentual_assistido >= 90),
                 ).length
                 setCompletedVideos(completed)
-                console.log(`Vídeos concluídos: ${completed}/${total}`)
+                console.log(`🔄 Videos completed: ${completed}/${total}`)
 
-                // Verificar se todos os vídeos foram concluídos
+                setProgressRefresh((prev) => prev + 1)
+
                 if (completed === total && total > 0) {
-                    console.log("Todos os vídeos foram concluídos! Verificando quiz...")
+                    console.log("All videos completed! Checking quiz...")
                     setTimeout(() => {
                         checkCourseCompletion()
                     }, 2000)
                 }
             }
         } catch (error) {
-            console.error("Erro ao calcular progresso do curso:", error)
+            console.error("Error calculating course progress:", error)
         }
     }, [id, userId, checkCourseCompletion])
-
-    // Carregar progresso inicial
-    React.useEffect(() => {
-        calculateCourseProgress()
-    }, [calculateCourseProgress])
-
-    // Verificar se deve mostrar notificação de quiz (apenas uma vez)
-    React.useEffect(() => {
-        if (quizState.shouldShowQuiz && !quizCompleted && !quizShown) {
-            console.log("🎯 Curso concluído! Mostrando notificação de quiz...")
-            setShowQuizNotification(true)
-            setQuizShown(true) // Marcar como já mostrado para esta sessão
-        }
-    }, [quizState.shouldShowQuiz, quizCompleted, quizShown])
-
-    const handleCourseComplete = useCallback(
-        async (courseId: string) => {
-            if (!userId || !id) return
-
-            try {
-                console.log("handleCourseComplete chamado para:", courseId)
-
-                // Recalcular progresso para ter certeza
-                await calculateCourseProgress()
-
-                // Verificar se todos os vídeos foram concluídos
-                const { data: allVideos } = await supabase.from("videos").select("id").eq("curso_id", id)
-
-                const { data: progressData } = await supabase
-                    .from("video_progress")
-                    .select("video_id, concluido, percentual_assistido")
-                    .eq("user_id", userId)
-                    .in("video_id", allVideos?.map((v) => v.id) || [])
-
-                const completedCount =
-                    progressData?.filter((p) => p.concluido === true || (p.percentual_assistido && p.percentual_assistido >= 90))
-                        .length || 0
-                const totalCount = allVideos?.length || 0
-
-                console.log(`Verificação final: ${completedCount}/${totalCount} vídeos concluídos`)
-
-                if (completedCount === totalCount && totalCount > 0) {
-                    console.log("Curso 100% concluído! Verificando disponibilidade de quiz...")
-
-                    // Forçar nova verificação do quiz
-                    await checkQuizAvailability()
-
-                    // Mostrar notificação de quiz após um pequeno delay
-                    setTimeout(() => {
-                        if (!certificate && !userProgress?.aprovado) {
-                            console.log("Mostrando notificação de quiz...")
-                            setShowQuizNotification(true)
-                            setQuizShown(true)
-                        } else {
-                            console.log("Quiz já foi completado ou certificado já existe")
-                        }
-                    }, 1500)
-                }
-            } catch (error) {
-                console.error("Erro ao verificar conclusão do curso:", error)
-            }
-        },
-        [userId, id, certificate, userProgress, checkQuizAvailability, calculateCourseProgress],
-    )
-
-    const handleQuizComplete = useCallback(() => {
-        setQuizCompleted(true)
-        toast({
-            title: "Quiz concluído!",
-            description: "Parabéns, você completou o quiz!",
-        })
-    }, [])
-
-    React.useEffect(() => {
-        if (videos.length > 0 && Object.keys(progress).length > 0) {
-            const completedVideos = videos.filter((video) => {
-                const videoProgress = progress[video.id]
-                const isCompleted =
-                    videoProgress?.concluido === true ||
-                    (videoProgress?.percentual_assistido && videoProgress.percentual_assistido >= 90)
-                return isCompleted
-            })
-
-            const allCompleted = completedVideos.length === videos.length
-
-            console.log(`Monitoramento de progresso: ${completedVideos.length}/${videos.length} vídeos concluídos`)
-
-            if (allCompleted && videos.length > 0 && !quizState.quizAlreadyCompleted && !quizShown) {
-                console.log("Todos os vídeos concluídos detectados! Forçando verificação do quiz...")
-                handleCourseComplete(id || "")
-            }
-        }
-    }, [videos, progress, quizState.quizAlreadyCompleted, quizShown, handleCourseComplete, id])
 
     const fetchVideosAndProgress = async () => {
         setLoading(true)
 
         if (process.env.NODE_ENV === "development") {
-            console.log("🔍 CursoDetalhe - Iniciando carregamento:", {
+            console.log("🔍 CursoDetalhe - Starting load:", {
                 cursoId: id,
                 userId: userId,
                 isAdmin: isAdmin,
@@ -303,16 +203,16 @@ const CursoDetalhe = () => {
                 .order("data_criacao", { ascending: false })
 
             if (videosError) {
-                console.error("❌ Erro ao buscar vídeos por curso_id:", videosError)
+                console.error("❌ Error fetching videos by curso_id:", videosError)
             } else {
-                console.log("🔍 CursoDetalhe - Vídeos encontrados por curso_id:", videosData)
+                console.log("🔍 CursoDetalhe - Videos found by curso_id:", videosData)
             }
 
             if (videosData && videosData.length > 0) {
-                console.log("✅ Vídeos encontrados especificamente para este curso:", videosData)
+                console.log("✅ Videos found specifically for this course:", videosData)
                 finalVideos = videosData
             } else {
-                console.log("🔍 CursoDetalhe - Nenhum vídeo encontrado por curso_id, verificando por categoria...")
+                console.log("🔍 CursoDetalhe - No videos found by curso_id, checking by category...")
 
                 const { data: cursoData, error: cursoError } = await supabase
                     .from("cursos")
@@ -321,9 +221,9 @@ const CursoDetalhe = () => {
                     .single()
 
                 if (cursoError) {
-                    console.error("❌ Erro ao buscar curso:", cursoError)
+                    console.error("❌ Error fetching course:", cursoError)
                 } else if (cursoData?.categoria) {
-                    console.log("🔍 CursoDetalhe - Categoria do curso:", cursoData.categoria)
+                    console.log("🔍 CursoDetalhe - Course category:", cursoData.categoria)
 
                     const { data: videosByCategory, error: categoryError } = await supabase
                         .from("videos")
@@ -333,20 +233,20 @@ const CursoDetalhe = () => {
                         .order("ordem", { ascending: true })
 
                     if (categoryError) {
-                        console.error("❌ Erro ao buscar vídeos por categoria:", categoryError)
+                        console.error("❌ Error fetching videos by category:", categoryError)
                     } else {
-                        console.log("🔍 CursoDetalhe - Vídeos encontrados por categoria (sem curso_id):", videosByCategory)
+                        console.log("🔍 CursoDetalhe - Videos found by category (without curso_id):", videosByCategory)
 
                         if (videosByCategory && videosByCategory.length > 0) {
-                            console.log("🔧 CursoDetalhe - Associando vídeos órfãos ao curso atual...")
+                            console.log("🔧 CursoDetalhe - Associating orphan videos to current course...")
 
                             for (const video of videosByCategory) {
                                 const { error: updateError } = await supabase.from("videos").update({ curso_id: id }).eq("id", video.id)
 
                                 if (updateError) {
-                                    console.error(`❌ Erro ao associar vídeo ${video.titulo}:`, updateError)
+                                    console.error(`❌ Error associating video ${video.titulo}:`, updateError)
                                 } else {
-                                    console.log(`✅ Vídeo "${video.titulo}" associado ao curso ${id}`)
+                                    console.log(`✅ Video "${video.titulo}" associated to course ${id}`)
                                 }
                             }
 
@@ -357,30 +257,30 @@ const CursoDetalhe = () => {
                                 .order("data_criacao", { ascending: false })
 
                             if (reloadError) {
-                                console.error("❌ Erro ao recarregar vídeos:", reloadError)
+                                console.error("❌ Error reloading videos:", reloadError)
                             } else {
-                                console.log("✅ Vídeos recarregados após associação:", updatedVideos)
+                                console.log("✅ Videos reloaded after association:", updatedVideos)
                                 finalVideos = updatedVideos || []
                             }
                         } else {
-                            console.log("📋 Nenhum vídeo órfão encontrado para esta categoria")
+                            console.log("📋 No orphan videos found for this category")
                             finalVideos = []
                         }
                     }
                 } else {
-                    console.log("📋 Nenhum vídeo encontrado para este curso específico")
+                    console.log("📋 No videos found for this specific course")
                     finalVideos = []
                 }
             }
         } catch (error) {
-            console.error("❌ Erro inesperado ao buscar vídeos:", error)
+            console.error("❌ Unexpected error fetching videos:", error)
         }
 
         if (finalVideos.length > 0) {
-            console.log("✅ Vídeos carregados com sucesso:", finalVideos)
+            console.log("✅ Videos loaded successfully:", finalVideos)
             setVideos(finalVideos)
         } else {
-            console.log("📋 Nenhum vídeo encontrado para este curso")
+            console.log("📋 No videos found for this course")
             setVideos([])
         }
 
@@ -393,16 +293,16 @@ const CursoDetalhe = () => {
                 finalVideos.map((v) => v.id),
             )
 
-        console.log("🔍 CursoDetalhe - Resultado da consulta de progresso:", {
+        console.log("🔍 CursoDetalhe - Progress query result:", {
             progressData: progressData,
             progressError: progressError,
             totalProgress: progressData?.length || 0,
         })
 
         if (progressError) {
-            console.error("❌ Erro ao carregar progresso:", progressError)
+            console.error("❌ Error loading progress:", progressError)
         } else {
-            console.log("✅ Progresso carregado com sucesso:", progressData)
+            console.log("✅ Progress loaded successfully:", progressData)
         }
 
         const progressMap: Record<string, Database["public"]["Tables"]["video_progress"]["Row"]> = {}
@@ -410,7 +310,152 @@ const CursoDetalhe = () => {
             if (p.video_id) progressMap[p.video_id] = p
         })
         setProgress(progressMap)
+
+        setTimeout(() => {
+            calculateCourseProgress()
+        }, 500)
+
         setLoading(false)
+    }
+
+    const getNextVideo = useCallback(
+        (currentVideoId: string) => {
+            const currentIndex = videos.findIndex((v) => v.id === currentVideoId)
+            if (currentIndex >= 0 && currentIndex < videos.length - 1) {
+                const nextVideo = videos[currentIndex + 1]
+                return {
+                    id: nextVideo.id,
+                    titulo: nextVideo.titulo,
+                }
+            }
+            return null
+        },
+        [videos],
+    )
+
+    const handleNextVideo = useCallback(
+        (currentVideoId: string) => {
+            const nextVideo = getNextVideo(currentVideoId)
+            if (nextVideo) {
+                const nextVideoData = videos.find((v) => v.id === nextVideo.id)
+                if (nextVideoData) {
+                    setSelectedVideo(nextVideoData)
+                }
+            }
+        },
+        [videos, getNextVideo],
+    )
+
+    const handleVideoProgressChange = useCallback(
+        (videoId: string, progressPercent: number) => {
+            console.log(`🔄 Video progress changed: ${videoId} - ${progressPercent}%`)
+
+            setProgress((prevProgress) => {
+                const updatedProgress = { ...prevProgress }
+                if (updatedProgress[videoId]) {
+                    updatedProgress[videoId] = {
+                        ...updatedProgress[videoId],
+                        percentual_assistido: progressPercent,
+                        concluido: progressPercent >= 90 ? true : updatedProgress[videoId].concluido,
+                    }
+                }
+                return updatedProgress
+            })
+
+            // Trigger immediate progress recalculation
+            if (progressPercent >= 90) {
+                setTimeout(() => {
+                    calculateCourseProgress()
+                }, 1000)
+            }
+        },
+        [calculateCourseProgress],
+    )
+
+    const handleCourseComplete = useCallback(
+        async (courseId: string) => {
+            if (!userId || !id) return
+
+            try {
+                console.log("handleCourseComplete called for:", courseId)
+
+                await calculateCourseProgress()
+
+                const { data: allVideos } = await supabase.from("videos").select("id").eq("curso_id", id)
+
+                const { data: progressData } = await supabase
+                    .from("video_progress")
+                    .select("video_id, concluido, percentual_assistido")
+                    .eq("user_id", userId)
+                    .in("video_id", allVideos?.map((v) => v.id) || [])
+
+                const completedCount =
+                    progressData?.filter((p) => p.concluido === true || (p.percentual_assistido && p.percentual_assistido >= 90))
+                        .length || 0
+                const totalCount = allVideos?.length || 0
+
+                console.log(`Final verification: ${completedCount}/${totalCount} videos completed`)
+
+                if (completedCount === totalCount && totalCount > 0) {
+                    console.log("Course 100% completed! Checking quiz availability...")
+
+                    await checkQuizAvailability()
+
+                    setTimeout(() => {
+                        if (!certificate && !userProgress?.aprovado) {
+                            console.log("Showing quiz notification...")
+                            setShowQuizNotification(true)
+                            setQuizShown(true)
+                        } else {
+                            console.log("Quiz already completed or certificate exists")
+                        }
+                    }, 1500)
+                }
+            } catch (error) {
+                console.error("Error verifying course completion:", error)
+            }
+        },
+        [userId, id, certificate, userProgress, checkQuizAvailability, calculateCourseProgress],
+    )
+
+    const handleQuizComplete = useCallback(() => {
+        setQuizCompleted(true)
+        setTimeout(() => {
+            checkQuizAvailability()
+            calculateCourseProgress()
+        }, 1000)
+
+        toast({
+            title: "Quiz concluído!",
+            description: "Parabéns, você completou o quiz!",
+        })
+    }, [checkQuizAvailability, calculateCourseProgress])
+
+    const createDefaultModules = async () => {
+        if (!isAdmin && modules.length === 0 && videos.length > 0) {
+            try {
+                console.log("🔧 Creating default modules for course...")
+
+                const { data: introModule, error: introError } = await supabase
+                    .from("modulos")
+                    .insert({
+                        curso_id: id,
+                        nome_modulo: "Introdução",
+                        descricao: "Vídeos introdutórios do curso",
+                        ordem: 1,
+                    })
+                    .select()
+                    .single()
+
+                if (introError) {
+                    console.error("❌ Error creating Introduction module:", introError)
+                } else {
+                    console.log("✅ Introduction module created:", introModule)
+                }
+            } catch (error) {
+                console.error("❌ Error creating default modules:", error)
+            }
+        }
     }
 
     React.useEffect(() => {
@@ -418,12 +463,108 @@ const CursoDetalhe = () => {
         fetchVideosAndProgress()
     }, [id, userId, refresh])
 
+    React.useEffect(() => {
+        if (!userId || !id) return
+
+        console.log("🔄 Setting up real-time subscription for course progress")
+
+        const subscription = supabase
+            .channel(`course_progress_${id}_${userId}`)
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "video_progress",
+                    filter: `user_id=eq.${userId}`,
+                },
+                (payload) => {
+                    console.log("🔄 Real-time course progress update:", payload)
+                    setTimeout(() => {
+                        calculateCourseProgress()
+                        // Also refresh the videos and progress data
+                        fetchVideosAndProgress()
+                    }, 500)
+                },
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "progresso_quiz",
+                    filter: `usuario_id=eq.${userId}`,
+                },
+                (payload) => {
+                    console.log("🔄 Real-time quiz progress update:", payload)
+                    setTimeout(() => {
+                        checkQuizAvailability()
+                    }, 500)
+                },
+            )
+            .subscribe((status) => {
+                console.log("🔄 Subscription status:", status)
+            })
+
+        return () => {
+            console.log("🔄 Cleaning up course progress subscription")
+            supabase.removeChannel(subscription)
+        }
+    }, [userId, id])
+
+    React.useEffect(() => {
+        calculateCourseProgress()
+    }, [calculateCourseProgress])
+
+    React.useEffect(() => {
+        if (quizState.shouldShowQuiz && !quizCompleted && !quizShown) {
+            console.log("🎯 Course completed! Showing quiz notification...")
+            setShowQuizNotification(true)
+            setQuizShown(true)
+        }
+    }, [quizState.shouldShowQuiz, quizCompleted, quizShown])
+
+    React.useEffect(() => {
+        if (!isAdmin && modules.length === 0 && videos.length > 0 && !loading) {
+            createDefaultModules()
+        }
+    }, [isAdmin, modules.length, videos.length, loading, id])
+
+    React.useEffect(() => {
+        if (videos.length > 0 && Object.keys(progress).length > 0) {
+            const completedVideos = videos.filter((video) => {
+                const videoProgress = progress[video.id]
+                const isCompleted =
+                    videoProgress?.concluido === true ||
+                    (videoProgress?.percentual_assistido && videoProgress.percentual_assistido >= 90)
+                return isCompleted
+            })
+
+            const allCompleted = completedVideos.length === videos.length
+
+            console.log(`Progress monitoring: ${completedVideos.length}/${videos.length} videos completed`)
+
+            setCompletedVideos(completedVideos.length)
+
+            if (allCompleted && videos.length > 0 && !quizState.quizAlreadyCompleted && !quizShown) {
+                console.log("All videos completed detected! Forcing quiz check...")
+                handleCourseComplete(id || "")
+            }
+        }
+    }, [videos, progress, quizState.quizAlreadyCompleted, quizShown, handleCourseComplete, id])
+
+    React.useEffect(() => {
+        if (videos.length > 0 && !selectedVideo) {
+            setSelectedVideo(videos[0])
+        }
+    }, [videos, selectedVideo])
+
     const filteredVideos = videos.filter((v) => {
         return v.curso_id === id
     })
 
     if (process.env.NODE_ENV === "development") {
-        console.log("🔍 CursoDetalhe - Vídeos filtrados:", {
+        console.log("🔍 CursoDetalhe - Filtered videos:", {
             totalVideos: videos.length,
             filteredVideosCount: filteredVideos.length,
             currentCourseId: id,
@@ -432,11 +573,11 @@ const CursoDetalhe = () => {
     }
 
     const totalProgress = Object.values(progress).reduce((acc, p) => acc + (p.percentual_assistido || 0), 0)
-    const averageProgress = filteredVideos.length > 0 ? totalProgress / filteredVideos.length : 0
+    const averageProgress = videos.length > 0 ? totalProgress / videos.length : 0
 
     const isCourseComplete =
-        filteredVideos.length > 0 &&
-        filteredVideos.every((video) => {
+        videos.length > 0 &&
+        videos.every((video) => {
             const videoProgress = progress[video.id]
             return (
                 videoProgress?.concluido === true ||
@@ -455,45 +596,6 @@ const CursoDetalhe = () => {
             window.open(`/certificado/${certificate.id}`, "_blank")
         }
     }
-
-    const createDefaultModules = async () => {
-        if (!isAdmin && modules.length === 0 && videos.length > 0) {
-            try {
-                console.log("🔧 Criando módulos padrão para o curso...")
-
-                const { data: introModule, error: introError } = await supabase
-                    .from("modulos")
-                    .insert({
-                        curso_id: id,
-                        nome_modulo: "Introdução",
-                        descricao: "Vídeos introdutórios do curso",
-                        ordem: 1,
-                    })
-                    .select()
-                    .single()
-
-                if (introError) {
-                    console.error("❌ Erro ao criar módulo Introdução:", introError)
-                } else {
-                    console.log("✅ Módulo Introdução criado:", introModule)
-                }
-            } catch (error) {
-                console.error("❌ Erro ao criar módulos padrão:", error)
-            }
-        }
-    }
-
-    React.useEffect(() => {
-        if (!isAdmin && modules.length === 0 && videos.length > 0 && !loading) {
-            createDefaultModules()
-        }
-    }, [isAdmin, modules.length, videos.length, loading, id])
-
-    React.useEffect(() => {
-        if (filteredVideos.length > 0 && !selectedVideo) {
-            setSelectedVideo(filteredVideos[0])
-        }
-    }, [filteredVideos, selectedVideo])
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -515,10 +617,10 @@ const CursoDetalhe = () => {
                         <div className="flex gap-2">
                             <Button
                                 onClick={() => {
-                                    console.log("🎯 Botão Adicionar Vídeo clicado!")
-                                    console.log("🎯 showVideoUpload antes:", showVideoUpload)
+                                    console.log("🎯 Add Video button clicked!")
+                                    console.log("🎯 showVideoUpload before:", showVideoUpload)
                                     setShowVideoUpload(true)
-                                    console.log("🎯 showVideoUpload depois:", true)
+                                    console.log("🎯 showVideoUpload after:", true)
                                 }}
                                 className="bg-era-green hover:bg-era-green/90 text-era-black"
                             >
@@ -530,7 +632,7 @@ const CursoDetalhe = () => {
                 </div>
 
                 {/* Progress Bar */}
-                {filteredVideos.length > 0 && (
+                {videos.length > 0 && (
                     <div className="mb-6">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium text-gray-700">Progresso do Curso</span>
@@ -567,6 +669,9 @@ const CursoDetalhe = () => {
                                         totalVideos={totalVideos}
                                         completedVideos={completedVideos}
                                         className="mb-6"
+                                        nextVideo={getNextVideo(selectedVideo.id)}
+                                        onNextVideo={() => handleNextVideo(selectedVideo.id)}
+                                        onProgressChange={(progress) => handleVideoProgressChange(selectedVideo.id, progress)}
                                     />
 
                                     {/* Informações do Vídeo */}
@@ -626,7 +731,7 @@ const CursoDetalhe = () => {
                                     </div>
                                 ) : (
                                     <div className="space-y-2">
-                                        {filteredVideos.map((video, index) => {
+                                        {videos.map((video, index) => {
                                             const videoProgress = progress[video.id]
                                             const isCompleted =
                                                 videoProgress?.concluido === true ||
@@ -674,7 +779,7 @@ const CursoDetalhe = () => {
                             </div>
 
                             {/* Estatísticas */}
-                            {filteredVideos.length > 0 && (
+                            {videos.length > 0 && (
                                 <div className="bg-white rounded-2xl shadow-lg p-6">
                                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                                         <Award className="h-5 w-5 text-era-green" />
@@ -683,13 +788,13 @@ const CursoDetalhe = () => {
                                     <div className="space-y-3">
                                         <div className="flex justify-between">
                                             <span className="text-sm text-gray-600">Total de vídeos</span>
-                                            <span className="text-sm font-medium">{filteredVideos.length}</span>
+                                            <span className="text-sm font-medium">{videos.length}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-sm text-gray-600">Vídeos concluídos</span>
                                             <span className="text-sm font-medium text-era-green">
                         {
-                            filteredVideos.filter((v) => {
+                            videos.filter((v) => {
                                 const videoProgress = progress[v.id]
                                 return (
                                     videoProgress?.concluido === true ||
@@ -757,11 +862,11 @@ const CursoDetalhe = () => {
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <VideoUpload
                             onClose={() => {
-                                console.log("🎯 Fechando modal VideoUpload")
+                                console.log("🎯 Closing VideoUpload modal")
                                 setShowVideoUpload(false)
                             }}
                             onSuccess={() => {
-                                console.log("🎯 Sucesso no upload, fechando modal")
+                                console.log("🎯 Upload success, closing modal")
                                 setShowVideoUpload(false)
                                 setRefresh((prev) => prev + 1)
                             }}

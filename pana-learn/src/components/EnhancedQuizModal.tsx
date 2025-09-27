@@ -103,15 +103,19 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
         setTimeRemaining(QUIZ_CONFIG.TIME_LIMIT_MINUTES * 60)
     }, [])
 
-    // Verificar disponibilidade quando modal abre
     useEffect(() => {
         if (isOpen && user?.id && courseId) {
+            console.log("Modal opened, checking quiz availability...")
             checkQuizAvailability()
-            if (!quizStartTime && quizConfig && !showResults) {
-                startQuiz()
-            }
+
+            setTimeout(() => {
+                if (!quizStartTime && !showResults && !userProgress) {
+                    console.log(" Starting quiz timer...")
+                    startQuiz()
+                }
+            }, 1000)
         }
-    }, [isOpen, user?.id, courseId, checkQuizAvailability, quizConfig, showResults])
+    }, [isOpen, user?.id, courseId, checkQuizAvailability, quizStartTime, showResults, userProgress])
 
     // Resetar estado quando modal fecha
     useEffect(() => {
@@ -138,7 +142,7 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                 acertos,
                 erros,
                 totalPerguntas: quizConfig?.perguntas.length || 20,
-                tentativa: 1, // TODO: Track attempts in database
+                tentativa: 1,
             })
         }
     }, [userProgress, showResults, quizConfig])
@@ -163,10 +167,14 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
     }
 
     const handleSubmitQuiz = async () => {
-        if (!quizConfig) return
+        if (!quizConfig) {
+            console.error("No quiz config available for submission")
+            return
+        }
 
         setIsSubmitting(true)
         try {
+            console.log("Submitting quiz answers...")
             const result = await submitQuiz(answers)
             if (result) {
                 const totalPerguntas = quizConfig.perguntas.length
@@ -179,7 +187,7 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                     acertos,
                     erros,
                     totalPerguntas,
-                    tentativa: 1, // TODO: Track attempts
+                    tentativa: 1,
                 }
 
                 setQuizResult(detailedResult)
@@ -190,7 +198,7 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                     title: result.aprovado ? "🎉 Parabéns!" : "📚 Continue estudando",
                     description: result.aprovado
                         ? `Você foi aprovado com ${result.nota}% (${acertos}/${totalPerguntas} acertos)!`
-                        : `Você precisa de pelo menos ${QUIZ_CONFIG.PASS_PERCENTAGE}% para ser aprovado. Você obteve ${result.nota}% (${acertos}/${totalPerguntas} acertos).`,
+                        : `Você precisa de pelo menos ${quizConfig.nota_minima}% para ser aprovado. Você obteve ${result.nota}% (${acertos}/${totalPerguntas} acertos).`,
                     variant: result.aprovado ? "default" : "destructive",
                 })
             }
@@ -218,8 +226,52 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
     const allQuestionsAnswered = totalQuestions > 0 && Object.keys(answers).length === totalQuestions
     const answeredCount = Object.keys(answers).length
 
+    if (isLoading) {
+        return (
+            <Dialog open={isOpen} onOpenChange={onClose}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Carregando quiz...</DialogTitle>
+                    </DialogHeader>
+                    <div className="text-center py-6">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                        <p className="text-muted-foreground">Preparando suas perguntas...</p>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        )
+    }
+
+    if (error) {
+        return (
+            <Dialog open={isOpen} onOpenChange={onClose}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Erro ao carregar quiz</DialogTitle>
+                    </DialogHeader>
+                    <div className="text-center py-6">
+                        <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                        <p className="text-red-600 mb-4">{error}</p>
+                        <div className="flex gap-2 justify-center">
+                            <Button
+                                onClick={() => {
+                                    console.log("🎯 Retrying quiz availability check...")
+                                    checkQuizAvailability()
+                                }}
+                                variant="outline"
+                            >
+                                Tentar novamente
+                            </Button>
+                            <Button onClick={onClose}>Fechar</Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        )
+    }
+
     // Se quiz não está disponível
-    if (!isQuizAvailable && !isLoading && !error) {
+    if (!isQuizAvailable && !quizConfig) {
         return (
             <Dialog open={isOpen} onOpenChange={onClose}>
                 <DialogContent className="max-w-md">
@@ -234,7 +286,48 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                         <p className="text-muted-foreground mb-4">
                             Para acessar o quiz, você precisa concluir todos os vídeos do curso primeiro.
                         </p>
-                        <Button onClick={onClose}>Entendi</Button>
+                        <div className="flex gap-2 justify-center">
+                            <Button
+                                onClick={() => {
+                                    console.log("🎯 Rechecking quiz availability...")
+                                    checkQuizAvailability()
+                                }}
+                                variant="outline"
+                            >
+                                Verificar novamente
+                            </Button>
+                            <Button onClick={onClose}>Entendi</Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        )
+    }
+
+    if (!quizConfig || !quizConfig.perguntas || quizConfig.perguntas.length === 0) {
+        return (
+            <Dialog open={isOpen} onOpenChange={onClose}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Quiz não encontrado</DialogTitle>
+                    </DialogHeader>
+                    <div className="text-center py-6">
+                        <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+                        <p className="text-muted-foreground mb-4">
+                            Não foi possível carregar as perguntas do quiz. Tente novamente.
+                        </p>
+                        <div className="flex gap-2 justify-center">
+                            <Button
+                                onClick={() => {
+                                    console.log("🎯 Reloading quiz config...")
+                                    checkQuizAvailability()
+                                }}
+                                variant="outline"
+                            >
+                                Recarregar
+                            </Button>
+                            <Button onClick={onClose}>Fechar</Button>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -273,41 +366,6 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
         )
     }
 
-    // Loading
-    if (isLoading) {
-        return (
-            <Dialog open={isOpen} onOpenChange={onClose}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Carregando quiz...</DialogTitle>
-                    </DialogHeader>
-                    <div className="text-center py-6">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                        <p className="text-muted-foreground">Preparando suas perguntas...</p>
-                    </div>
-                </DialogContent>
-            </Dialog>
-        )
-    }
-
-    // Erro
-    if (error) {
-        return (
-            <Dialog open={isOpen} onOpenChange={onClose}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Erro</DialogTitle>
-                    </DialogHeader>
-                    <div className="text-center py-6">
-                        <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-                        <p className="text-red-600 mb-4">{error}</p>
-                        <Button onClick={onClose}>Fechar</Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
-        )
-    }
-
     // Mostrar resultados
     if (showResults && quizResult) {
         const canRetry = !quizResult.aprovado && quizResult.tentativa < QUIZ_CONFIG.MAX_ATTEMPTS
@@ -327,7 +385,6 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                     </DialogHeader>
 
                     <div className="space-y-6">
-                        {/* Resultado Principal */}
                         <div className="text-center">
                             <div
                                 className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
@@ -346,7 +403,7 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                             <p className="text-muted-foreground mb-4">
                                 {quizResult.aprovado
                                     ? "Você foi aprovado no quiz e seu certificado foi gerado!"
-                                    : `Você precisa de pelo menos ${QUIZ_CONFIG.PASS_PERCENTAGE}% para ser aprovado.`}
+                                    : `Você precisa de pelo menos ${quizConfig.nota_minima}% para ser aprovado.`}
                             </p>
                         </div>
 
@@ -366,7 +423,6 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                             </Card>
                         </div>
 
-                        {/* Nota e Progresso */}
                         <div className="space-y-3">
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium">Sua nota:</span>
@@ -385,13 +441,12 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                   {quizResult.acertos}/{quizResult.totalPerguntas} corretas
                 </span>
                                 <span>
-                  Mínimo: {Math.ceil((QUIZ_CONFIG.PASS_PERCENTAGE / 100) * quizResult.totalPerguntas)}/
+                  Mínimo: {Math.ceil((quizConfig.nota_minima / 100) * quizResult.totalPerguntas)}/
                                     {quizResult.totalPerguntas}
                 </span>
                             </div>
                         </div>
 
-                        {/* Informações adicionais */}
                         <div className="bg-muted/50 p-4 rounded-lg">
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
@@ -407,7 +462,6 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                             </div>
                         </div>
 
-                        {/* Ações */}
                         <div className="flex gap-3">
                             {canRetry && (
                                 <Button
@@ -436,24 +490,6 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
         )
     }
 
-    // Quiz não encontrado
-    if (!quizConfig) {
-        return (
-            <Dialog open={isOpen} onOpenChange={onClose}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Quiz não encontrado</DialogTitle>
-                    </DialogHeader>
-                    <div className="text-center py-6">
-                        <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-                        <p className="text-muted-foreground mb-4">Não foi possível carregar o quiz para este curso.</p>
-                        <Button onClick={onClose}>Fechar</Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
-        )
-    }
-
     // Interface do quiz
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -475,7 +511,6 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                 </DialogHeader>
 
                 <div className="space-y-6">
-                    {/* Header com informações do quiz */}
                     <div className="bg-muted/50 p-4 rounded-lg">
                         <div className="grid grid-cols-3 gap-4 text-sm">
                             <div className="text-center">
@@ -483,7 +518,7 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                                 <div className="text-muted-foreground">Perguntas</div>
                             </div>
                             <div className="text-center">
-                                <div className="font-semibold">{QUIZ_CONFIG.PASS_PERCENTAGE}%</div>
+                                <div className="font-semibold">{quizConfig.nota_minima}%</div>
                                 <div className="text-muted-foreground">Nota mínima</div>
                             </div>
                             <div className="text-center">
@@ -493,7 +528,6 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                         </div>
                     </div>
 
-                    {/* Progresso */}
                     <div className="space-y-2">
                         <div className="flex justify-between text-sm">
               <span>
@@ -506,7 +540,6 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                         <Progress value={progress} className="h-2" />
                     </div>
 
-                    {/* Questão atual */}
                     {currentQuestion && (
                         <Card>
                             <CardContent className="pt-6">
@@ -548,7 +581,6 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                         </Card>
                     )}
 
-                    {/* Navegação */}
                     <div className="flex justify-between items-center">
                         <Button variant="outline" onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0}>
                             <ArrowLeft className="h-4 w-4 mr-2" />

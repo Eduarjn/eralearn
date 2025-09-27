@@ -35,6 +35,7 @@ export function useVideoProgress(
     const [videoProgressId, setVideoProgressId] = useState<string | null>(null)
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const lastSaveTimeRef = useRef<number>(0)
+    const [wasCompleted, setWasCompleted] = useState(false)
 
     // Carregar progresso existente
     useEffect(() => {
@@ -63,10 +64,11 @@ export function useVideoProgress(
                 if (data) {
                     console.log("Progresso carregado:", data)
                     setVideoProgressId(data.id)
+                    setWasCompleted(data.concluido || false)
                     setProgress({
                         tempoAssistido: data.tempo_assistido || 0,
                         tempoTotal: data.tempo_total || 0,
-                        percentualAssistido: data.percentual_assistido || 0,
+                        percentualAssistido: data.concluido ? 100 : data.percentual_assistido || 0,
                         concluido: data.concluido || false,
                         dataConclusao: data.data_conclusao,
                         loading: false,
@@ -74,6 +76,7 @@ export function useVideoProgress(
                     })
                 } else {
                     console.log("Nenhum progresso encontrado, criando novo...")
+                    setWasCompleted(false)
                     setProgress((prev) => ({ ...prev, loading: false }))
                 }
             } catch (error) {
@@ -97,16 +100,21 @@ export function useVideoProgress(
             const validTempoTotal = Number.isFinite(tempoTotal) && tempoTotal > 0 ? tempoTotal : 1
 
             const percentualCalculado = validTempoTotal > 0 ? Math.min((validTempoAssistido / validTempoTotal) * 100, 100) : 0
-            const isCompleted = concluido ?? percentualCalculado >= 90
+
+            const isCompleted = wasCompleted || concluido || (percentualCalculado >= 90 && !wasCompleted)
 
             setProgress((prev) => ({
                 ...prev,
                 tempoAssistido: Math.round(validTempoAssistido),
                 tempoTotal: Math.round(validTempoTotal),
-                percentualAssistido: Math.round(percentualCalculado),
+                percentualAssistido: wasCompleted ? 100 : Math.round(percentualCalculado),
                 concluido: isCompleted,
-                dataConclusao: isCompleted ? new Date().toISOString() : prev.dataConclusao,
+                dataConclusao: isCompleted ? prev.dataConclusao || new Date().toISOString() : prev.dataConclusao,
             }))
+
+            if (wasCompleted && !concluido) {
+                return
+            }
 
             // Debounce: salvar no máximo a cada 2 segundos
             const now = Date.now()
@@ -124,7 +132,7 @@ export function useVideoProgress(
             lastSaveTimeRef.current = now
             await saveProgressToDatabase(validTempoAssistido, validTempoTotal, isCompleted)
         },
-        [userId, videoId, cursoId],
+        [userId, videoId, cursoId, wasCompleted],
     )
 
     const saveProgressToDatabase = useCallback(
@@ -134,6 +142,7 @@ export function useVideoProgress(
                     tempoAssistido,
                     tempoTotal,
                     concluido,
+                    wasCompleted,
                 })
 
                 const progressData = {
@@ -142,9 +151,9 @@ export function useVideoProgress(
                     curso_id: cursoId!,
                     tempo_assistido: Math.round(tempoAssistido),
                     tempo_total: Math.round(tempoTotal),
-                    percentual_assistido: Math.round((tempoAssistido / tempoTotal) * 100),
-                    concluido,
-                    data_conclusao: concluido ? new Date().toISOString() : null,
+                    percentual_assistido: wasCompleted || concluido ? 100 : Math.round((tempoAssistido / tempoTotal) * 100),
+                    concluido: wasCompleted || concluido,
+                    data_conclusao: wasCompleted || concluido ? new Date().toISOString() : null,
                 }
 
                 const result = await supabase
@@ -167,7 +176,7 @@ export function useVideoProgress(
                 console.error("Erro ao salvar progresso:", error)
             }
         },
-        [userId, videoId, cursoId],
+        [userId, videoId, cursoId, wasCompleted],
     )
 
     // Marcar vídeo como concluído
@@ -203,6 +212,7 @@ export function useVideoProgress(
 
             if (result.data) {
                 console.log("Vídeo marcado como concluído:", result.data)
+                setWasCompleted(true)
                 setProgress((prev) => ({
                     ...prev,
                     concluido: true,
@@ -214,6 +224,15 @@ export function useVideoProgress(
             console.error("Erro ao marcar como concluído:", error)
         }
     }, [userId, videoId, cursoId])
+
+    const checkRewatch = useCallback(async (): Promise<boolean> => {
+        if (!wasCompleted) return true
+
+        return new Promise((resolve) => {
+            const confirmed = window.confirm("Você já concluiu este vídeo. Deseja realmente assistir novamente?")
+            resolve(confirmed)
+        })
+    }, [wasCompleted])
 
     // Limpar timeout ao desmontar
     useEffect(() => {
@@ -228,6 +247,8 @@ export function useVideoProgress(
         progress,
         saveProgress,
         markAsCompleted,
+        checkRewatch,
+        wasCompleted,
         loading: progress.loading,
         error: progress.error,
     }
