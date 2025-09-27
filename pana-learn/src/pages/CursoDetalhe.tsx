@@ -84,9 +84,9 @@ const CursoDetalhe = () => {
     const navigate = useNavigate()
 
     if (process.env.NODE_ENV === "development") {
-        console.log("🎯 CursoDetalhe - Componente carregado")
-        console.log("🎯 CursoDetalhe - ID recebido:", id)
-        console.log("🎯 CursoDetalhe - IsAdmin:", isAdmin)
+        console.log("CursoDetalhe - Componente carregado")
+        console.log(" CursoDetalhe - ID recebido:", id)
+        console.log(" CursoDetalhe - IsAdmin:", isAdmin)
     }
 
     const [videos, setVideos] = React.useState<VideoWithModulo[]>([])
@@ -401,6 +401,11 @@ const CursoDetalhe = () => {
 
                     await checkQuizAvailability()
 
+                    if (certificate || userProgress?.aprovado) {
+                        console.log("User already has certificate or completed quiz, skipping quiz notification")
+                        return
+                    }
+
                     setTimeout(() => {
                         if (!certificate && !userProgress?.aprovado) {
                             console.log("Showing quiz notification...")
@@ -630,6 +635,32 @@ const CursoDetalhe = () => {
                         </div>
                     )}
                 </div>
+
+                {videos.length > 0 && !selectedVideo && (
+                    <div className="mb-6 bg-white rounded-2xl shadow-lg p-6">
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-era-green/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Play className="h-8 w-8 text-era-green" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Introdução</h2>
+                            <p className="text-gray-600 mb-4 max-w-2xl mx-auto">
+                                Bem-vindo ao curso <strong>{currentCourseData?.nome}</strong>! Para começar, selecione um dos vídeos
+                                disponíveis na lista ao lado. Você pode assistir aos vídeos em qualquer ordem e acompanhar seu progresso
+                                em tempo real.
+                            </p>
+                            <div className="flex items-center justify-center gap-4 text-sm text-gray-500">
+                                <div className="flex items-center gap-2">
+                                    <Video className="h-4 w-4" />
+                                    <span>{videos.length} vídeos disponíveis</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4" />
+                                    <span>Progresso salvo automaticamente</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Progress Bar */}
                 {videos.length > 0 && (

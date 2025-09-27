@@ -45,6 +45,7 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
     const checkQuizAvailability = useCallback(async () => {
         if (!userId || !courseId) {
             console.log("Missing userId or courseId for quiz check")
+            setIsLoading(false)
             return
         }
 
@@ -59,12 +60,14 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
             if (videosError) {
                 console.error("Error fetching videos:", videosError)
                 setError("Erro ao verificar vídeos do curso")
+                setIsLoading(false)
                 return
             }
 
             if (!videos || videos.length === 0) {
                 console.log("No videos found for course")
                 setIsQuizAvailable(false)
+                setIsLoading(false)
                 return
             }
 
@@ -79,6 +82,7 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
             if (progressError) {
                 console.error("Error checking video progress:", progressError)
                 setError("Erro ao verificar progresso dos vídeos")
+                setIsLoading(false)
                 return
             }
 
@@ -96,114 +100,152 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
             if (!allVideosCompleted) {
                 console.log("Not all videos completed, quiz not available")
                 setIsQuizAvailable(false)
+                setError(`Complete todos os vídeos primeiro. Progresso: ${completedVideos}/${videos.length} vídeos concluídos.`)
+                setIsLoading(false)
                 return
             }
 
-            // Try multiple methods to find quiz
             let quizId: string | null = null
+            let quizFound = false
 
             // Method 1: Direct course mapping
             try {
-                const { data: mappingData } = await supabase
+                console.log("🎯 Method 1: Checking direct course mapping...")
+                const { data: mappingData, error: mappingError } = await supabase
                     .from("curso_quiz_mapping")
                     .select("quiz_id")
                     .eq("curso_id", courseId)
                     .maybeSingle()
 
-                if (mappingData?.quiz_id) {
-                    const { data: quizData } = await supabase
+                if (mappingError) {
+                    console.log("Mapping table error:", mappingError)
+                } else if (mappingData?.quiz_id) {
+                    const { data: quizData, error: quizError } = await supabase
                         .from("quizzes")
-                        .select("id, ativo")
+                        .select("id, ativo, titulo")
                         .eq("id", mappingData.quiz_id)
                         .eq("ativo", true)
                         .maybeSingle()
 
-                    if (quizData) {
+                    if (quizError) {
+                        console.log("Quiz validation error:", quizError)
+                    } else if (quizData) {
                         quizId = quizData.id
-                        console.log("🎯 Found quiz via direct mapping:", quizId)
+                        quizFound = true
+                        console.log("🎯 Found quiz via direct mapping:", { id: quizId, title: quizData.titulo })
                     }
                 }
             } catch (error) {
-                console.log("Method 1 failed, trying method 2...")
+                console.log("Method 1 failed:", error)
             }
 
             // Method 2: By course category
-            if (!quizId) {
+            if (!quizFound) {
                 try {
-                    const { data: courseData } = await supabase
+                    console.log("🎯 Method 2: Checking by course category...")
+                    const { data: courseData, error: courseError } = await supabase
                         .from("cursos")
                         .select("categoria, nome")
                         .eq("id", courseId)
                         .maybeSingle()
 
-                    if (courseData?.categoria) {
-                        const { data: quizData } = await supabase
+                    if (courseError) {
+                        console.log("Course data error:", courseError)
+                    } else if (courseData?.categoria) {
+                        console.log("Course category:", courseData.categoria)
+
+                        const { data: quizData, error: quizError } = await supabase
                             .from("quizzes")
-                            .select("id, ativo")
+                            .select("id, ativo, titulo, categoria")
                             .eq("categoria", courseData.categoria)
                             .eq("ativo", true)
                             .maybeSingle()
 
-                        if (quizData) {
+                        if (quizError) {
+                            console.log("Category quiz error:", quizError)
+                        } else if (quizData) {
                             quizId = quizData.id
-                            console.log("🎯 Found quiz via category:", quizId)
+                            quizFound = true
+                            console.log("🎯 Found quiz via category:", {
+                                id: quizId,
+                                title: quizData.titulo,
+                                category: quizData.categoria,
+                            })
                         }
                     }
                 } catch (error) {
-                    console.log("Method 2 failed, trying method 3...")
+                    console.log("Method 2 failed:", error)
                 }
             }
 
             // Method 3: By course name similarity
-            if (!quizId) {
+            if (!quizFound) {
                 try {
-                    const { data: courseData } = await supabase.from("cursos").select("nome").eq("id", courseId).maybeSingle()
+                    console.log("🎯 Method 3: Checking by course name similarity...")
+                    const { data: courseData, error: courseError } = await supabase
+                        .from("cursos")
+                        .select("nome")
+                        .eq("id", courseId)
+                        .maybeSingle()
 
-                    if (courseData?.nome) {
-                        const { data: quizData } = await supabase
+                    if (courseError) {
+                        console.log("Course name error:", courseError)
+                    } else if (courseData?.nome) {
+                        console.log("Course name:", courseData.nome)
+
+                        // Try exact match first
+                        const { data: exactQuizData, error: exactError } = await supabase
                             .from("quizzes")
-                            .select("id, ativo")
+                            .select("id, ativo, titulo")
                             .ilike("titulo", `%${courseData.nome}%`)
                             .eq("ativo", true)
                             .maybeSingle()
 
-                        if (quizData) {
-                            quizId = quizData.id
-                            console.log("🎯 Found quiz via name similarity:", quizId)
+                        if (exactError) {
+                            console.log("Exact name match error:", exactError)
+                        } else if (exactQuizData) {
+                            quizId = exactQuizData.id
+                            quizFound = true
+                            console.log("🎯 Found quiz via name similarity:", { id: quizId, title: exactQuizData.titulo })
                         }
                     }
                 } catch (error) {
-                    console.log("Method 3 failed, trying method 4...")
+                    console.log("Method 3 failed:", error)
                 }
             }
 
             // Method 4: Generic fallback - get any active quiz
-            if (!quizId) {
+            if (!quizFound) {
                 try {
-                    const { data: quizData } = await supabase
+                    console.log("🎯 Method 4: Using fallback - any active quiz...")
+                    const { data: quizData, error: quizError } = await supabase
                         .from("quizzes")
-                        .select("id, ativo")
+                        .select("id, ativo, titulo")
                         .eq("ativo", true)
                         .limit(1)
                         .maybeSingle()
 
-                    if (quizData) {
+                    if (quizError) {
+                        console.log("Fallback quiz error:", quizError)
+                    } else if (quizData) {
                         quizId = quizData.id
-                        console.log("🎯 Found quiz via fallback method:", quizId)
+                        quizFound = true
+                        console.log("🎯 Found quiz via fallback method:", { id: quizId, title: quizData.titulo })
                     }
                 } catch (error) {
-                    console.log("All methods failed to find quiz")
+                    console.log("Method 4 failed:", error)
                 }
             }
 
-            if (quizId) {
+            if (quizFound && quizId) {
+                console.log("🎯 Quiz found, loading configuration...")
                 await loadQuizConfig(quizId)
                 setIsQuizAvailable(true)
                 console.log("🎯 Quiz is available!")
             } else {
                 console.log("🎯 No quiz found for this course")
                 setIsQuizAvailable(false)
-                setError("Nenhum quiz encontrado para este curso")
+                setError("Nenhum quiz encontrado para este curso. Entre em contato com o administrador.")
             }
         } catch (err) {
             console.error("Error checking quiz availability:", err)
@@ -213,7 +255,6 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
         }
     }, [userId, courseId])
 
-    // Carregar configuração do quiz
     const loadQuizConfig = useCallback(
         async (quizId: string) => {
             try {
@@ -228,7 +269,7 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
 
                 if (quizError) {
                     console.error("Error loading quiz:", quizError)
-                    throw quizError
+                    throw new Error(`Erro ao carregar quiz: ${quizError.message}`)
                 }
 
                 console.log("🎯 Quiz data loaded:", quizData)
@@ -242,13 +283,29 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
 
                 if (questionsError) {
                     console.error("Error loading questions:", questionsError)
-                    throw questionsError
+                    throw new Error(`Erro ao carregar perguntas: ${questionsError.message}`)
                 }
 
                 console.log("🎯 Questions loaded:", questionsData?.length || 0, "questions")
 
                 if (!questionsData || questionsData.length === 0) {
-                    throw new Error("Nenhuma pergunta encontrada para este quiz")
+                    throw new Error("Nenhuma pergunta encontrada para este quiz. Entre em contato com o administrador.")
+                }
+
+                const validQuestions = questionsData.filter((q) => {
+                    if (!q.pergunta || !q.opcoes || !Array.isArray(q.opcoes) || q.opcoes.length < 2) {
+                        console.warn("Invalid question format:", q)
+                        return false
+                    }
+                    return true
+                })
+
+                if (validQuestions.length === 0) {
+                    throw new Error("Nenhuma pergunta válida encontrada para este quiz.")
+                }
+
+                if (validQuestions.length !== questionsData.length) {
+                    console.warn(`${questionsData.length - validQuestions.length} perguntas inválidas foram filtradas`)
                 }
 
                 // Buscar progresso do usuário (se existir)
@@ -294,17 +351,17 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
                 // Montar configuração do quiz
                 const config: QuizConfig = {
                     id: quizData.id,
-                    titulo: quizData.titulo,
-                    descricao: quizData.descricao,
-                    categoria: quizData.categoria,
+                    titulo: quizData.titulo || "Quiz do Curso",
+                    descricao: quizData.descricao || "Avalie seus conhecimentos sobre o curso",
+                    categoria: quizData.categoria || "Geral",
                     nota_minima: quizData.nota_minima || 70,
-                    perguntas: questionsData.map((q) => ({
+                    perguntas: validQuestions.map((q) => ({
                         id: q.id,
                         pergunta: q.pergunta,
-                        opcoes: q.opcoes,
-                        resposta_correta: q.resposta_correta,
+                        opcoes: Array.isArray(q.opcoes) ? q.opcoes : [],
+                        resposta_correta: q.resposta_correta || 0,
                         explicacao: q.explicacao,
-                        ordem: q.ordem,
+                        ordem: q.ordem || 0,
                     })),
                     mensagem_sucesso: "Parabéns! Você concluiu o curso com sucesso!",
                     mensagem_reprova: "Continue estudando e tente novamente.",
@@ -313,10 +370,12 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
                 setQuizConfig(config)
                 setUserProgress(progressData)
                 setCertificate(certData)
-                console.log("🎯 Quiz config set successfully")
+                console.log("🎯 Quiz config set successfully with", config.perguntas.length, "questions")
             } catch (err) {
                 console.error("Error loading quiz config:", err)
-                setError(err instanceof Error ? err.message : "Erro ao carregar configuração do quiz")
+                const errorMessage = err instanceof Error ? err.message : "Erro ao carregar configuração do quiz"
+                setError(errorMessage)
+                setQuizConfig(null)
             }
         },
         [userId, courseId],
@@ -335,9 +394,15 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
                 setError(null)
                 console.log("🎯 Submitting quiz with answers:", respostas)
 
+                const answeredQuestions = Object.keys(respostas).length
+                const totalQuestions = quizConfig.perguntas.length
+
+                if (answeredQuestions !== totalQuestions) {
+                    throw new Error(`Responda todas as perguntas. ${answeredQuestions}/${totalQuestions} respondidas.`)
+                }
+
                 // Calcular nota
                 let acertos = 0
-                const totalPerguntas = quizConfig.perguntas.length
 
                 quizConfig.perguntas.forEach((pergunta) => {
                     const respostaUsuario = respostas[pergunta.id]
@@ -346,10 +411,10 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
                     }
                 })
 
-                const nota = Math.round((acertos / totalPerguntas) * 100)
+                const nota = Math.round((acertos / totalQuestions) * 100)
                 const aprovado = nota >= quizConfig.nota_minima
 
-                console.log("🎯 Quiz results:", { acertos, totalPerguntas, nota, aprovado })
+                console.log("🎯 Quiz results:", { acertos, totalQuestions, nota, aprovado, notaMinima: quizConfig.nota_minima })
 
                 // Salvar progresso do quiz
                 const { error: progressError } = await supabase.from("progresso_quiz").upsert({
@@ -363,7 +428,7 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
 
                 if (progressError) {
                     console.error("Error saving quiz progress:", progressError)
-                    throw progressError
+                    throw new Error(`Erro ao salvar progresso: ${progressError.message}`)
                 }
 
                 // Se aprovado, gerar certificado
@@ -415,7 +480,8 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
                 return { nota, aprovado }
             } catch (err) {
                 console.error("Error submitting quiz:", err)
-                setError(err instanceof Error ? err.message : "Erro ao submeter respostas do quiz")
+                const errorMessage = err instanceof Error ? err.message : "Erro ao submeter respostas do quiz"
+                setError(errorMessage)
                 return null
             } finally {
                 setIsLoading(false)
