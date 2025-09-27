@@ -25,7 +25,21 @@ export function getVideoUploadTarget(): VideoUploadTarget {
  * Upload para Supabase Storage (lógica extraída do VideoUpload.tsx)
  */
 export async function uploadToSupabase(file: File): Promise<VideoUploadResult> {
-  const filePath = `videos/${Date.now()}_${file.name}`;
+  // Sanitize do nome do arquivo para evitar erros de "Invalid key" no Supabase
+  // 1) Remover acentos/diacríticos
+  // 2) Substituir espaços por _
+  // 3) Manter apenas [a-zA-Z0-9._-]
+  // 4) Normalizar múltiplos _ e remover _ nas bordas
+  const originalName = file.name;
+  const sanitizedBaseName = originalName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove diacríticos
+    .replace(/\s+/g, '_')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  const filePath = `videos/${Date.now()}_${sanitizedBaseName}`;
   
   const { data, error } = await supabase.storage
     .from("training-videos")

@@ -81,7 +81,7 @@ function SidebarItem({
             <button
                 className={`group w-full flex items-center justify-between text-left transition-all duration-200 ease-out rounded-lg ${
                     isExpanded ? "p-3" : "p-3 justify-center"
-                } ${isAnySubmenuActive ? "bg-[#CCFF00]/20 text-white" : "text-gray-300 hover:bg-white/10 hover:text-white"}`}
+                } ${isAnySubmenuActive ? "bg-era-green/20 text-era-white" : "text-era-white/80 hover:bg-era-white/10 hover:text-era-white"}`}
                 onClick={() => {
                     if (isExpanded) {
                         setOpen((v) => !v)
@@ -92,21 +92,21 @@ function SidebarItem({
                 type="button"
             >
         <span className="flex items-center gap-3">
-          <Icon className="h-5 w-5" />
+          <Icon className={`h-5 w-5 ${isAnySubmenuActive ? 'text-era-green' : 'text-era-white'}`} />
           <span
               className={`font-medium transition-all duration-200 ${
                   isExpanded ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2 absolute"
-              }`}
+              } ${isAnySubmenuActive ? 'text-era-green' : 'text-era-white'}`}
           >
             {label}
           </span>
         </span>
                 {isExpanded && (
-                    <ChevronDown className={`transition-all duration-200 ${open ? "rotate-180" : ""} h-4 w-4 text-gray-400`} />
+                    <ChevronDown className={`transition-all duration-200 ${open ? "rotate-180" : ""} h-4 w-4 ${isAnySubmenuActive ? 'text-era-green' : 'text-era-white/60'}`} />
                 )}
             </button>
             {open && isExpanded && (
-                <div className="ml-6 mt-2 space-y-1 bg-black/30 rounded-lg p-2">
+                <div className="ml-6 mt-2 space-y-1 bg-era-black/30 rounded-lg p-2">
                     {visibleSubmenu.map((item) => {
                         const isSpecialActive =
                             item.path === "/configuracoes/preferencias" && location.pathname === "/configuracoes"
@@ -117,8 +117,8 @@ function SidebarItem({
                                 className={({ isActive }) =>
                                     `block text-sm p-2 rounded-md transition-all duration-200 ${
                                         isActive || isSpecialActive
-                                            ? "text-white bg-[#CCFF00]/20 font-medium"
-                                            : "text-gray-400 hover:text-white hover:bg-white/10"
+                                            ? "text-era-white bg-era-green/20 font-medium"
+                                            : "text-era-white/60 hover:text-era-white hover:bg-era-white/10"
                                     }`
                                 }
                             >
@@ -164,9 +164,9 @@ export function ERASidebar() {
                 isExpanded ? "w-80" : "w-20"
             }`}
             style={{
-                background: "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)",
+                background: "linear-gradient(180deg, #2b363d 0%, #1a1a1a 100%)",
                 backdropFilter: "blur(20px)",
-                borderRight: "1px solid rgba(204, 255, 0, 0.1)",
+                borderRight: "1px solid rgba(207, 255, 0, 0.1)",
             }}
             onMouseEnter={() => setIsExpanded(true)}
             onMouseLeave={() => setIsExpanded(false)}
@@ -178,25 +178,25 @@ export function ERASidebar() {
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
             </div>
 
-            <div className="p-4 border-b border-white/10">
+            <div className="p-4 border-b border-era-white/10">
                 <div className={`flex items-center gap-3 transition-all duration-300 ${!isExpanded && "justify-center"}`}>
-                    <div className="w-10 h-10 bg-[#CCFF00] rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-black font-bold text-lg">E</span>
+                    <div className="w-10 h-10 bg-era-green rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-era-black font-bold text-lg">E</span>
                     </div>
                     {isExpanded && (
                         <div className="flex-1">
-                            <p className="text-xs text-gray-400 uppercase tracking-wide">Plataforma de Ensino</p>
-                            <p className="text-white font-medium">ERA Learn</p>
+                            <p className="text-xs text-era-white/60 uppercase tracking-wide">Plataforma de Ensino</p>
+                            <p className="text-era-white font-medium">ERA Learn</p>
                         </div>
                     )}
-                    {isExpanded && <ChevronRight className="w-4 h-4 text-gray-400" />}
+                    {isExpanded && <ChevronRight className="w-4 h-4 text-era-white/60" />}
                 </div>
             </div>
 
             <div className="flex-1 px-4 py-6">
                 {isExpanded && (
                     <div className="mb-4">
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">MAIN</p>
+                        <p className="text-xs font-semibold text-era-white/60 uppercase tracking-wider mb-2">MAIN</p>
                     </div>
                 )}
 
@@ -224,13 +224,13 @@ export function ERASidebar() {
                                 variant="ghost"
                                 className={`group w-full transition-all duration-200 ease-out rounded-lg ${
                                     isActive
-                                        ? "bg-slate-700/50 text-white font-semibold border border-[#CCFF00]/30"
-                                        : "text-gray-300 hover:bg-slate-700/30 hover:text-white"
+                                        ? "bg-era-green text-era-black font-semibold border border-era-green/30"
+                                        : "text-era-white/80 hover:bg-era-white/10 hover:text-era-white"
                                 } ${isExpanded ? "justify-start p-3" : "justify-center p-3"}`}
                                 onClick={() => handleItemClick(item.path)}
                             >
-                                <item.icon className="h-5 w-5" />
-                                {isExpanded && <span className="ml-3 font-medium">{item.title}</span>}
+                                <item.icon className={`h-5 w-5 ${isActive ? 'text-era-black' : 'text-era-white'}`} />
+                                {isExpanded && <span className={`ml-3 font-medium ${isActive ? 'text-era-black' : 'text-era-white'}`}>{item.title}</span>}
                             </Button>
                         )
                     })}
@@ -240,26 +240,26 @@ export function ERASidebar() {
             <div className="p-4 space-y-4">
                 {/* User Profile Section */}
                 <div className={`flex items-center gap-3 transition-all duration-300 ${!isExpanded && "justify-center"}`}>
-                    <div className="w-8 h-8 bg-[#CCFF00]/20 rounded-full flex items-center justify-center flex-shrink-0">
-                        <User className="h-4 w-4 text-[#CCFF00]" />
+                    <div className="w-8 h-8 bg-era-green/20 rounded-full flex items-center justify-center flex-shrink-0">
+                        <User className="h-4 w-4 text-era-green" />
                     </div>
                     {isExpanded && (
                         <div className="min-w-0 flex-1">
-                            <p className="text-xs text-gray-400 uppercase tracking-wide">
+                            <p className="text-xs text-era-white/60 uppercase tracking-wide">
                                 {userProfile?.tipo_usuario === "admin" ? "Administrador" : "Cliente"}
                             </p>
-                            <p className="text-white font-medium truncate">{userProfile?.nome || "Usuário"}</p>
+                            <p className="text-era-white font-medium truncate">{userProfile?.nome || "Usuário"}</p>
                         </div>
                     )}
                 </div>
 
                 {/* Let's start section */}
                 {isExpanded && (
-                    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
-                        <h3 className="text-white font-semibold mb-2">Let's start!</h3>
-                        <p className="text-gray-400 text-sm mb-4">Creating or adding new tasks couldn't be easier</p>
+                    <div className="bg-era-black/50 rounded-lg p-4 border border-era-white/10">
+                        <h3 className="text-era-white font-semibold mb-2">Let's start!</h3>
+                        <p className="text-era-white/60 text-sm mb-4">Creating or adding new tasks couldn't be easier</p>
                         <Button
-                            className="w-full bg-[#CCFF00] hover:bg-[#CCFF00]/90 text-black font-semibold"
+                            className="w-full bg-era-green hover:bg-era-green/90 text-era-black font-semibold"
                             onClick={() => navigate("/treinamentos")}
                         >
                             <Plus className="h-4 w-4 mr-2" />
@@ -273,7 +273,7 @@ export function ERASidebar() {
                     <div className="flex justify-center">
                         <Button
                             size="sm"
-                            className="bg-[#CCFF00] hover:bg-[#CCFF00]/90 text-black w-10 h-10 p-0"
+                            className="bg-era-green hover:bg-era-green/90 text-era-black w-10 h-10 p-0"
                             onClick={() => navigate("/treinamentos")}
                         >
                             <Plus className="w-4 h-4" />
@@ -284,7 +284,7 @@ export function ERASidebar() {
                 {/* Exit Button */}
                 <Button
                     variant="ghost"
-                    className={`group w-full transition-all duration-200 ease-out text-gray-300 hover:bg-red-500/20 hover:text-red-400 rounded-lg ${
+                    className={`group w-full transition-all duration-200 ease-out text-era-white/80 hover:bg-red-500/20 hover:text-red-400 rounded-lg ${
                         isExpanded ? "justify-start p-3" : "justify-center p-3"
                     }`}
                     onClick={handleSignOut}

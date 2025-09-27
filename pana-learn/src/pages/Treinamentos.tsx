@@ -1,6 +1,6 @@
 import { ERALayout } from '@/components/ERALayout';
 import { CourseCard } from '@/components/CourseCard';
-import { VideoUpload } from '@/components/VideoUpload';
+import VideoUpload from '@/components/VideoUpload';
 import { YouTubeEmbed } from '@/components/YouTubeEmbed';
 import { useCourses } from '@/hooks/useCourses';
 import type { Course } from '@/hooks/useCourses';

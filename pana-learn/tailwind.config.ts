@@ -79,14 +79,14 @@ export default {
 					'sand-foreground': "rgb(var(--brand-sand-foreground) / <alpha-value>)",
 				},
 				// ERA color palette (mantido para compatibilidade)
-				'era-white': '#FFFFFF',
-				'era-black': '#000000',
-				'era-green': '#34C759',
+				'era-white': '#f2f7f7',
+				'era-black': '#2b363d',
+				'era-green': '#cfff00',
 				'era-gray-light': '#F5F5F5',
 				'era-gray-medium': '#4A4A4A',
-				'era-text-primary': '#000000',
+				'era-text-primary': '#2b363d',
 				'era-text-secondary': '#4A4A4A',
-				'era-background': '#FFFFFF',
+				'era-background': '#f2f7f7',
 				'era-border': '#E5E5E5',
 				
 				// Futuristic color palette
