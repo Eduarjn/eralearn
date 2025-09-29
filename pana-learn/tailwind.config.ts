@@ -19,6 +19,10 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ['var(--font-sans)'],
+				heading: ['var(--font-heading)'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -63,15 +67,26 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// ERA color palette
-				'era-white': '#FFFFFF',
-				'era-black': '#000000',
-				'era-green': '#34C759',
+				// ERA Theme Brand Colors (usando tokens CSS)
+				brand: {
+					primary: "rgb(var(--brand-primary) / <alpha-value>)",
+					dark: "rgb(var(--brand-dark) / <alpha-value>)",
+					muted: "rgb(var(--brand-muted) / <alpha-value>)",
+					sand: "rgb(var(--brand-sand) / <alpha-value>)",
+					'primary-foreground': "rgb(var(--brand-primary-foreground) / <alpha-value>)",
+					'dark-foreground': "rgb(var(--brand-dark-foreground) / <alpha-value>)",
+					'muted-foreground': "rgb(var(--brand-muted-foreground) / <alpha-value>)",
+					'sand-foreground': "rgb(var(--brand-sand-foreground) / <alpha-value>)",
+				},
+				// ERA color palette (mantido para compatibilidade)
+				'era-white': '#f2f7f7',
+				'era-black': '#2b363d',
+				'era-green': '#cfff00',
 				'era-gray-light': '#F5F5F5',
 				'era-gray-medium': '#4A4A4A',
-				'era-text-primary': '#000000',
+				'era-text-primary': '#2b363d',
 				'era-text-secondary': '#4A4A4A',
-				'era-background': '#FFFFFF',
+				'era-background': '#f2f7f7',
 				'era-border': '#E5E5E5',
 				
 				// Futuristic color palette

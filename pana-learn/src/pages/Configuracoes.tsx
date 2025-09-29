@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Routes, Route, Outlet } from 'react-router-dom';
-import { usePreferences, FontSize, Language } from '../../frontend/src/context/PreferencesContext';
+import { usePreferences, FontSize, Language } from '@/pages/PreferencesContext.tsx';
 import { useBranding } from '@/context/BrandingContext';
 
 
