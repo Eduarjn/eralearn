@@ -60,6 +60,7 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
     const [showCompletionPopup, setShowCompletionPopup] = useState(false)
     const [countdown, setCountdown] = useState(3)
     const [showRewatchDialog, setShowRewatchDialog] = useState(false)
+    const [hasUserInteracted, setHasUserInteracted] = useState(false)
 
     const { toast } = useToast()
     const { progress, saveProgress, markAsCompleted, checkRewatch, wasCompleted } = useVideoProgress(
@@ -96,10 +97,10 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
     const youtubeVideoId = finalIsYouTube ? extractYouTubeVideoId(finalVideoUrl) : ""
 
     useEffect(() => {
-        if (wasCompleted && !finalIsYouTube) {
+        if (wasCompleted && !finalIsYouTube && hasUserInteracted) {
             setShowRewatchDialog(true)
         }
-    }, [wasCompleted, finalIsYouTube])
+    }, [wasCompleted, finalIsYouTube, hasUserInteracted])
 
     const handleRewatchConfirm = (confirmed: boolean) => {
         setShowRewatchDialog(false)
@@ -236,6 +237,19 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
                 variant: "default",
             })
 
+            if (onProgressChange) {
+                onProgressChange(100)
+            }
+
+            setTimeout(() => {
+                // Trigger parent component to refresh video list
+                window.dispatchEvent(
+                    new CustomEvent("videoCompleted", {
+                        detail: { videoId: video.id, courseId: cursoId },
+                    }),
+                )
+            }, 100)
+
             if (nextVideo && onNextVideo) {
                 setShowCompletionPopup(true)
                 setCountdown(3)
@@ -251,11 +265,6 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
                         return prev - 1
                     })
                 }, 1000)
-            }
-
-            // Verificar se é o último vídeo da categoria
-            if (onProgressChange) {
-                onProgressChange(100)
             }
 
             // Verificar se o curso foi completamente concluído
@@ -279,6 +288,8 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
     }
 
     const togglePlay = () => {
+        setHasUserInteracted(true)
+
         if (isYouTube) {
             // Para YouTube, apenas marcar como concluído se necessário
             if (!progress.concluido && duration > 0) {
@@ -378,7 +389,10 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
                                 className="w-full aspect-video"
                                 poster={video.thumbnail_url}
                                 controls={false}
-                                onPlay={() => setIsPlaying(true)}
+                                onPlay={() => {
+                                    setIsPlaying(true)
+                                    setHasUserInteracted(true)
+                                }}
                                 onPause={() => setIsPlaying(false)}
                                 autoPlay={shouldAutoPlay}
                             />
@@ -392,7 +406,10 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
                         className="w-full aspect-video"
                         poster={video.thumbnail_url}
                         controls={false}
-                        onPlay={() => setIsPlaying(true)}
+                        onPlay={() => {
+                            setIsPlaying(true)
+                            setHasUserInteracted(true)
+                        }}
                         onPause={() => setIsPlaying(false)}
                         autoPlay={shouldAutoPlay}
                     />

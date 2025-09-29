@@ -34,6 +34,13 @@ interface CertificateData {
     qr_code_url?: string
 }
 
+interface RetryState {
+    canRetry: boolean
+    nextRetryTime: Date | null
+    attemptsCount: number
+    maxAttempts: number
+}
+
 export function useQuiz(userId: string | undefined, courseId: string | undefined) {
     const [quizConfig, setQuizConfig] = useState<QuizConfig | null>(null)
     const [isLoading, setIsLoading] = useState(false)
@@ -41,6 +48,12 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
     const [isQuizAvailable, setIsQuizAvailable] = useState(false)
     const [userProgress, setUserProgress] = useState<any>(null)
     const [certificate, setCertificate] = useState<CertificateData | null>(null)
+    const [retryState, setRetryState] = useState<RetryState>({
+        canRetry: true,
+        nextRetryTime: null,
+        attemptsCount: 0,
+        maxAttempts: 3,
+    })
 
     const checkQuizAvailability = useCallback(async () => {
         if (!userId || !courseId) {
@@ -381,11 +394,56 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
         [userId, courseId],
     )
 
+    const checkRetryCooldown = useCallback(async () => {
+        if (!userId || !quizConfig?.id) return
+
+        try {
+            const { data: attempts, error } = await supabase
+                .from("progresso_quiz")
+                .select("data_conclusao, aprovado")
+                .eq("usuario_id", userId)
+                .eq("quiz_id", quizConfig.id)
+                .order("data_conclusao", { ascending: false })
+
+            if (error) {
+                console.error("Error checking retry attempts:", error)
+                return
+            }
+
+            const failedAttempts = attempts?.filter((a) => !a.aprovado) || []
+            const attemptsCount = failedAttempts.length
+
+            if (attemptsCount > 0) {
+                const lastFailedAttempt = failedAttempts[0]
+                const lastAttemptTime = new Date(lastFailedAttempt.data_conclusao)
+                const cooldownTime = new Date(lastAttemptTime.getTime() + 30 * 60 * 1000) // 30 minutes
+                const now = new Date()
+
+                const canRetry = now >= cooldownTime || attemptsCount < retryState.maxAttempts
+
+                setRetryState({
+                    canRetry,
+                    nextRetryTime: canRetry ? null : cooldownTime,
+                    attemptsCount,
+                    maxAttempts: retryState.maxAttempts,
+                })
+            }
+        } catch (err) {
+            console.error("Error checking retry cooldown:", err)
+        }
+    }, [userId, quizConfig?.id, retryState.maxAttempts])
+
     // Submeter respostas do quiz
     const submitQuiz = useCallback(
         async (respostas: Record<string, number>) => {
             if (!userId || !quizConfig) {
                 console.error("Missing userId or quizConfig for quiz submission")
+                return null
+            }
+
+            if (!retryState.canRetry && retryState.nextRetryTime) {
+                const timeRemaining = Math.ceil((retryState.nextRetryTime.getTime() - new Date().getTime()) / (1000 * 60))
+                setError(`Você deve aguardar ${timeRemaining} minutos antes de tentar novamente.`)
                 return null
             }
 
@@ -416,19 +474,36 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
 
                 console.log("🎯 Quiz results:", { acertos, totalQuestions, nota, aprovado, notaMinima: quizConfig.nota_minima })
 
-                // Salvar progresso do quiz
-                const { error: progressError } = await supabase.from("progresso_quiz").upsert({
-                    usuario_id: userId,
-                    quiz_id: quizConfig.id,
-                    respostas: respostas,
-                    nota: nota,
-                    aprovado: aprovado,
-                    data_conclusao: new Date().toISOString(),
-                })
+                // Salvar progresso do quiz with proper conflict resolution
+                const { error: progressError } = await supabase.from("progresso_quiz").upsert(
+                    {
+                        usuario_id: userId,
+                        quiz_id: quizConfig.id,
+                        respostas: respostas,
+                        nota: nota,
+                        aprovado: aprovado,
+                        data_conclusao: new Date().toISOString(),
+                    },
+                    {
+                        onConflict: "usuario_id,quiz_id",
+                    },
+                )
 
                 if (progressError) {
                     console.error("Error saving quiz progress:", progressError)
                     throw new Error(`Erro ao salvar progresso: ${progressError.message}`)
+                }
+
+                if (!aprovado) {
+                    const newAttemptsCount = retryState.attemptsCount + 1
+                    const cooldownTime = new Date(new Date().getTime() + 30 * 60 * 1000) // 30 minutes from now
+
+                    setRetryState({
+                        canRetry: newAttemptsCount < retryState.maxAttempts,
+                        nextRetryTime: newAttemptsCount < retryState.maxAttempts ? cooldownTime : null,
+                        attemptsCount: newAttemptsCount,
+                        maxAttempts: retryState.maxAttempts,
+                    })
                 }
 
                 // Se aprovado, gerar certificado
@@ -487,8 +562,15 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
                 setIsLoading(false)
             }
         },
-        [userId, quizConfig, courseId],
+        [userId, quizConfig, courseId, retryState],
     )
+
+    const resetQuizForRetry = useCallback(() => {
+        setError(null)
+        setUserProgress(null)
+        // Check cooldown when resetting
+        checkRetryCooldown()
+    }, [checkRetryCooldown])
 
     useEffect(() => {
         if (userId && courseId) {
@@ -496,6 +578,12 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
             checkQuizAvailability()
         }
     }, [userId, courseId, checkQuizAvailability])
+
+    useEffect(() => {
+        if (quizConfig && userId) {
+            checkRetryCooldown()
+        }
+    }, [quizConfig, userId, checkRetryCooldown])
 
     return {
         quizConfig,
@@ -506,5 +594,8 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
         certificate,
         submitQuiz,
         checkQuizAvailability,
+        retryState,
+        resetQuizForRetry,
+        checkRetryCooldown,
     }
 }

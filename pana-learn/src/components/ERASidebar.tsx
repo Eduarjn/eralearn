@@ -261,15 +261,20 @@ export function ERASidebar() {
 
                 {/* Let's start section */}
                 {isExpanded && (
-                    <div className="bg-era-black/50 rounded-lg p-4 border border-era-white/10">
-                        <h3 className="text-era-white font-semibold mb-2">Let's start!</h3>
-                        <p className="text-era-white/60 text-sm mb-4">Creating or adding new tasks couldn't be easier</p>
+                    <div className="bg-gradient-to-br from-era-green/10 to-era-green/5 rounded-xl p-4 border border-era-green/20 backdrop-blur-sm">
+                        <h3 className="text-era-white font-semibold mb-2 flex items-center gap-2">
+                            <div className="w-2 h-2 bg-era-green rounded-full animate-pulse"></div>
+                            Vamos começar!
+                        </h3>
+                        <p className="text-era-white/70 text-sm mb-4 leading-relaxed">
+                            Criar ou adicionar novas tarefas nunca foi tão fácil
+                        </p>
                         <Button
-                            className="w-full bg-era-green hover:bg-era-green/90 text-era-black font-semibold"
+                            className="w-full bg-gradient-to-r from-era-green to-era-green/90 hover:from-era-green/90 hover:to-era-green/80 text-era-black font-semibold shadow-lg hover:shadow-xl transition-all duration-200 border-0"
                             onClick={() => navigate("/treinamentos")}
                         >
                             <Plus className="h-4 w-4 mr-2" />
-                            Add New Task
+                            Adicionar Nova Tarefa
                         </Button>
                     </div>
                 )}
@@ -279,10 +284,10 @@ export function ERASidebar() {
                     <div className="flex justify-center">
                         <Button
                             size="sm"
-                            className="bg-era-green hover:bg-era-green/90 text-era-black w-10 h-10 p-0"
+                            className="bg-gradient-to-r from-era-green to-era-green/90 hover:from-era-green/90 hover:to-era-green/80 text-era-black w-12 h-12 p-0 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
                             onClick={() => navigate("/treinamentos")}
                         >
-                            <Plus className="w-4 h-4" />
+                            <Plus className="w-5 h-5" />
                         </Button>
                     </div>
                 )}
@@ -290,13 +295,15 @@ export function ERASidebar() {
                 {/* Exit Button */}
                 <Button
                     variant="ghost"
-                    className={`group w-full transition-all duration-200 ease-out text-era-white/80 hover:bg-red-500/20 hover:text-red-400 rounded-lg ${
+                    className={`group w-full transition-all duration-200 ease-out rounded-xl border border-transparent hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400 text-era-white/80 ${
                         isExpanded ? "justify-start p-3" : "justify-center p-3"
                     }`}
                     onClick={handleSignOut}
                 >
-                    <LogOut className="h-4 w-4" />
-                    {isExpanded && <span className="ml-3 font-medium">Sair</span>}
+                    <LogOut className="h-4 w-4 group-hover:text-red-400 transition-colors duration-200" />
+                    {isExpanded && (
+                        <span className="ml-3 font-medium group-hover:text-red-400 transition-colors duration-200">Sair</span>
+                    )}
                 </Button>
             </div>
         </div>

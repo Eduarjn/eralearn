@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client"
 import type { Module, Course } from "@/hooks/useCourses"
 import type { Database } from "@/integrations/supabase/types"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, CheckCircle, Play, Clock, PlusCircle, Video, FileText, Award } from "lucide-react"
+import { ArrowLeft, CheckCircle, Play, Clock, PlusCircle, Video, FileText, Award, BookOpen, Lock } from "lucide-react"
 import { VideoPlayerWithProgress } from "@/components/VideoPlayerWithProgress"
 import { Progress } from "@/components/ui/progress"
 import CommentsSection from "@/components/CommentsSection"
@@ -20,6 +20,7 @@ import { VideoInfo } from "@/components/VideoInfo"
 import { EnhancedQuizModal } from "@/components/EnhancedQuizModal"
 import { QuizCompletionNotification } from "@/components/QuizCompletionNotification"
 import { useEnhancedQuiz } from "@/hooks/useEnhancedQuiz"
+import { GlossaryModule } from "@/components/GlossaryModule"
 
 type VideoWithModulo = Database["public"]["Tables"]["videos"]["Row"] & {
     modulo_id?: string
@@ -84,9 +85,9 @@ const CursoDetalhe = () => {
     const navigate = useNavigate()
 
     if (process.env.NODE_ENV === "development") {
-        console.log("CursoDetalhe - Componente carregado")
-        console.log(" CursoDetalhe - ID recebido:", id)
-        console.log(" CursoDetalhe - IsAdmin:", isAdmin)
+        console.log("🎯 CursoDetalhe - Componente carregado")
+        console.log("🎯 CursoDetalhe - ID recebido:", id)
+        console.log("🎯 CursoDetalhe - IsAdmin:", isAdmin)
     }
 
     const [videos, setVideos] = React.useState<VideoWithModulo[]>([])
@@ -101,6 +102,8 @@ const CursoDetalhe = () => {
     const [showQuizModal, setShowQuizModal] = React.useState(false)
     const [refresh, setRefresh] = React.useState(0)
     const [progressRefresh, setProgressRefresh] = React.useState(0)
+    const [hasShownIntroduction, setHasShownIntroduction] = React.useState(false)
+    const [manualQuizCheck, setManualQuizCheck] = React.useState(false)
 
     const [editingModuleId, setEditingModuleId] = React.useState<string | null>(null)
     const [editTitle, setEditTitle] = React.useState("")
@@ -130,6 +133,58 @@ const CursoDetalhe = () => {
     } = useEnhancedQuiz(userId, id)
 
     const { generateCertificate } = useCertificates(userId)
+
+    const [glossaryCompleted, setGlossaryCompleted] = React.useState(false)
+    const [checkingGlossary, setCheckingGlossary] = React.useState(true)
+
+    // Check if this is an NVIDIA course that requires glossary first
+    const isNVIDIACourse =
+        currentCourseData?.nome?.toLowerCase().includes("nvidia") ||
+        currentCourseData?.nome?.toLowerCase().includes("rdma") ||
+        currentCourseData?.categoria?.toLowerCase().includes("nvidia")
+
+    const checkGlossaryCompletion = async () => {
+        if (!userId || !id || !isNVIDIACourse) {
+            setGlossaryCompleted(true)
+            setCheckingGlossary(false)
+            return
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from("video_progress")
+                .select("concluido")
+                .eq("user_id", userId)
+                .eq("video_id", `glossary-${id}`)
+                .eq("concluido", true)
+                .maybeSingle()
+
+            if (error && error.code !== "PGRST116") {
+                console.error("Error checking glossary completion:", error)
+            }
+
+            setGlossaryCompleted(!!data)
+        } catch (error) {
+            console.error("Error checking glossary:", error)
+            setGlossaryCompleted(false)
+        } finally {
+            setCheckingGlossary(false)
+        }
+    }
+
+    React.useEffect(() => {
+        if (userId && id) {
+            checkGlossaryCompletion()
+        }
+    }, [userId, id, isNVIDIACourse])
+
+    const handleGlossaryComplete = () => {
+        setGlossaryCompleted(true)
+        // Refresh videos after glossary completion
+        setTimeout(() => {
+            fetchVideosAndProgress()
+        }, 1000)
+    }
 
     const calculateCourseProgress = useCallback(async () => {
         if (!id || !userId) return
@@ -358,18 +413,30 @@ const CursoDetalhe = () => {
                         percentual_assistido: progressPercent,
                         concluido: progressPercent >= 90 ? true : updatedProgress[videoId].concluido,
                     }
+                } else {
+                    // Create new progress entry if it doesn't exist
+                    updatedProgress[videoId] = {
+                        id: `temp-${videoId}`,
+                        user_id: userId || "",
+                        video_id: videoId,
+                        percentual_assistido: progressPercent,
+                        concluido: progressPercent >= 90,
+                        tempo_assistido: 0,
+                        data_inicio: new Date().toISOString(),
+                        data_conclusao: progressPercent >= 90 ? new Date().toISOString() : null,
+                    }
                 }
                 return updatedProgress
             })
 
-            // Trigger immediate progress recalculation
+            // Trigger immediate progress recalculation for completed videos
             if (progressPercent >= 90) {
                 setTimeout(() => {
                     calculateCourseProgress()
-                }, 1000)
+                }, 500)
             }
         },
-        [calculateCourseProgress],
+        [calculateCourseProgress, userId],
     )
 
     const handleCourseComplete = useCallback(
@@ -399,28 +466,30 @@ const CursoDetalhe = () => {
                 if (completedCount === totalCount && totalCount > 0) {
                     console.log("Course 100% completed! Checking quiz availability...")
 
-                    await checkQuizAvailability()
+                    if (manualQuizCheck) {
+                        await checkQuizAvailability()
 
-                    if (certificate || userProgress?.aprovado) {
-                        console.log("User already has certificate or completed quiz, skipping quiz notification")
-                        return
-                    }
-
-                    setTimeout(() => {
-                        if (!certificate && !userProgress?.aprovado) {
-                            console.log("Showing quiz notification...")
-                            setShowQuizNotification(true)
-                            setQuizShown(true)
-                        } else {
-                            console.log("Quiz already completed or certificate exists")
+                        if (certificate || userProgress?.aprovado) {
+                            console.log("User already has certificate or completed quiz, skipping quiz notification")
+                            return
                         }
-                    }, 1500)
+
+                        setTimeout(() => {
+                            if (!certificate && !userProgress?.aprovado) {
+                                console.log("Showing quiz notification...")
+                                setShowQuizNotification(true)
+                                setQuizShown(true)
+                            } else {
+                                console.log("Quiz already completed or certificate exists")
+                            }
+                        }, 1500)
+                    }
                 }
             } catch (error) {
                 console.error("Error verifying course completion:", error)
             }
         },
-        [userId, id, certificate, userProgress, checkQuizAvailability, calculateCourseProgress],
+        [userId, id, certificate, userProgress, checkQuizAvailability, calculateCourseProgress, manualQuizCheck],
     )
 
     const handleQuizComplete = useCallback(() => {
@@ -551,18 +620,36 @@ const CursoDetalhe = () => {
 
             setCompletedVideos(completedVideos.length)
 
-            if (allCompleted && videos.length > 0 && !quizState.quizAlreadyCompleted && !quizShown) {
+            // Only trigger if manually requested
+            if (allCompleted && videos.length > 0 && !quizState.quizAlreadyCompleted && !quizShown && manualQuizCheck) {
                 console.log("All videos completed detected! Forcing quiz check...")
                 handleCourseComplete(id || "")
             }
         }
-    }, [videos, progress, quizState.quizAlreadyCompleted, quizShown, handleCourseComplete, id])
+    }, [videos, progress, quizState.quizAlreadyCompleted, quizShown, handleCourseComplete, id, manualQuizCheck])
 
     React.useEffect(() => {
         if (videos.length > 0 && !selectedVideo) {
-            setSelectedVideo(videos[0])
+            setHasShownIntroduction(true)
         }
     }, [videos, selectedVideo])
+
+    React.useEffect(() => {
+        const handleVideoCompleted = (event: CustomEvent) => {
+            console.log("🔄 Video completion event received:", event.detail)
+            // Immediately refresh progress and video list
+            setTimeout(() => {
+                calculateCourseProgress()
+                fetchVideosAndProgress()
+            }, 500)
+        }
+
+        window.addEventListener("videoCompleted", handleVideoCompleted as EventListener)
+
+        return () => {
+            window.removeEventListener("videoCompleted", handleVideoCompleted as EventListener)
+        }
+    }, [calculateCourseProgress])
 
     const filteredVideos = videos.filter((v) => {
         return v.curso_id === id
@@ -590,15 +677,22 @@ const CursoDetalhe = () => {
             )
         })
 
-    React.useEffect(() => {
-        if (isCourseComplete && !certificate && quizConfig) {
-            setShowQuizModal(true)
-        }
-    }, [isCourseComplete, certificate, quizConfig])
+    // React.useEffect(() => {
+    //   if (isCourseComplete && !certificate && quizConfig) {
+    //     setShowQuizModal(true)
+    //   }
+    // }, [isCourseComplete, certificate, quizConfig])
 
     const handleViewCertificate = () => {
         if (certificate) {
             window.open(`/certificado/${certificate.id}`, "_blank")
+        }
+    }
+
+    const handleStartQuizCheck = () => {
+        setManualQuizCheck(true)
+        if (isCourseComplete) {
+            handleCourseComplete(id || "")
         }
     }
 
@@ -636,34 +730,103 @@ const CursoDetalhe = () => {
                     )}
                 </div>
 
-                {videos.length > 0 && !selectedVideo && (
-                    <div className="mb-6 bg-white rounded-2xl shadow-lg p-6">
-                        <div className="text-center">
-                            <div className="w-16 h-16 bg-era-green/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Play className="h-8 w-8 text-era-green" />
+                {/* NVIDIA Course Glossary Requirement */}
+                {isNVIDIACourse && !glossaryCompleted && !checkingGlossary && (
+                    <div className="mb-8">
+                        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6">
+                            <div className="flex items-center gap-2 mb-2">
+                                <BookOpen className="h-5 w-5 text-blue-600" />
+                                <h3 className="font-semibold text-blue-900">Pré-requisito: Glossário</h3>
                             </div>
-                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Introdução</h2>
-                            <p className="text-gray-600 mb-4 max-w-2xl mx-auto">
-                                Bem-vindo ao curso <strong>{currentCourseData?.nome}</strong>! Para começar, selecione um dos vídeos
-                                disponíveis na lista ao lado. Você pode assistir aos vídeos em qualquer ordem e acompanhar seu progresso
-                                em tempo real.
+                            <p className="text-blue-800 text-sm">
+                                Este curso requer que você estude o glossário de termos técnicos antes de acessar os vídeos.
                             </p>
-                            <div className="flex items-center justify-center gap-4 text-sm text-gray-500">
-                                <div className="flex items-center gap-2">
-                                    <Video className="h-4 w-4" />
-                                    <span>{videos.length} vídeos disponíveis</span>
+                        </div>
+                        <GlossaryModule
+                            courseId={id || ""}
+                            userId={userId}
+                            onComplete={handleGlossaryComplete}
+                            isCompleted={glossaryCompleted}
+                        />
+                    </div>
+                )}
+
+                {/* Show loading for glossary check */}
+                {isNVIDIACourse && checkingGlossary && (
+                    <div className="flex items-center justify-center py-12">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-era-green mx-auto mb-4"></div>
+                            <p className="text-gray-600">Verificando pré-requisitos...</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Show locked message for NVIDIA course without glossary */}
+                {isNVIDIACourse && !glossaryCompleted && !checkingGlossary && videos.length > 0 && (
+                    <div className="mb-6 bg-amber-50 border border-amber-200 p-6 rounded-lg">
+                        <div className="flex items-center gap-3 mb-3">
+                            <Lock className="h-6 w-6 text-amber-600" />
+                            <h3 className="text-lg font-semibold text-amber-900">Vídeos Bloqueados</h3>
+                        </div>
+                        <p className="text-amber-800 mb-4">
+                            Os vídeos deste curso estarão disponíveis após você concluir o glossário de termos técnicos. Isso garante
+                            que você tenha o conhecimento base necessário para aproveitar melhor o conteúdo.
+                        </p>
+                        <div className="flex items-center gap-2 text-sm text-amber-700">
+                            <span>📚 {videos.length} vídeos aguardando</span>
+                            <span>•</span>
+                            <span>🔒 Desbloqueie completando o glossário acima</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Regular course introduction for non-NVIDIA or completed glossary */}
+                {(!isNVIDIACourse || glossaryCompleted) && videos.length > 0 && !selectedVideo && hasShownIntroduction && (
+                    <div className="mb-6 bg-white rounded-2xl shadow-lg p-8">
+                        <div className="text-center">
+                            <div className="w-20 h-20 bg-era-green/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Play className="h-10 w-10 text-era-green" />
+                            </div>
+                            <h2 className="text-3xl font-bold text-gray-900 mb-4">Bem-vindo ao Curso</h2>
+                            <h3 className="text-xl font-semibold text-era-green mb-4">{currentCourseData?.nome}</h3>
+                            <p className="text-gray-600 mb-6 max-w-3xl mx-auto text-lg leading-relaxed">
+                                {isNVIDIACourse && glossaryCompleted ? (
+                                    <>
+                                        Excelente! Você concluiu o glossário e agora pode <strong>clicar em um dos vídeos</strong> para
+                                        continuar seus estudos. Com o conhecimento dos termos técnicos, você aproveitará melhor o conteúdo
+                                        avançado.
+                                    </>
+                                ) : (
+                                    <>
+                                        Para começar seus estudos, <strong>clique em um dos vídeos</strong> disponíveis na lista ao lado.
+                                        Você pode assistir aos vídeos em qualquer ordem e seu progresso será salvo automaticamente. Após
+                                        concluir todos os vídeos, você poderá fazer o quiz final para obter seu certificado.
+                                    </>
+                                )}
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-2xl mx-auto">
+                                <div className="flex flex-col items-center p-4 bg-gray-50 rounded-lg">
+                                    <Video className="h-8 w-8 text-era-green mb-2" />
+                                    <span className="font-medium text-gray-900">{videos.length} vídeos</span>
+                                    <span className="text-sm text-gray-500">disponíveis</span>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4" />
-                                    <span>Progresso salvo automaticamente</span>
+                                <div className="flex flex-col items-center p-4 bg-gray-50 rounded-lg">
+                                    <Clock className="h-8 w-8 text-era-green mb-2" />
+                                    <span className="font-medium text-gray-900">Progresso</span>
+                                    <span className="text-sm text-gray-500">salvo automaticamente</span>
+                                </div>
+                                <div className="flex flex-col items-center p-4 bg-gray-50 rounded-lg">
+                                    <Award className="h-8 w-8 text-era-green mb-2" />
+                                    <span className="font-medium text-gray-900">Certificado</span>
+                                    <span className="text-sm text-gray-500">após conclusão</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* Progress Bar */}
-                {videos.length > 0 && (
+                {/* Progress Bar - only show if glossary is completed or not NVIDIA course */}
+                {(!isNVIDIACourse || glossaryCompleted) && videos.length > 0 && (
                     <div className="mb-6">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium text-gray-700">Progresso do Curso</span>
@@ -683,8 +846,8 @@ const CursoDetalhe = () => {
                     </div>
                 )}
 
-                {/* Main Content */}
-                {!loading && (
+                {/* Main Content - only show if glossary is completed or not NVIDIA course */}
+                {!loading && (!isNVIDIACourse || glossaryCompleted) && (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Player e Comentários */}
                         <div className="lg:col-span-2 flex flex-col gap-6">
@@ -713,22 +876,21 @@ const CursoDetalhe = () => {
                                         progresso={progress[selectedVideo.id]}
                                     />
 
-                                    {/* Seção de Quiz (quando vídeos estão completos) */}
-                                    {isCourseComplete && quizConfig && (
+                                    {isCourseComplete && (
                                         <div className="mt-6 p-4 bg-gradient-to-r from-era-green/10 to-era-green/20 rounded-lg border border-era-green/30">
                                             <div className="flex items-center justify-between">
                                                 <div>
                                                     <h3 className="text-lg font-semibold text-era-black mb-1">🎯 Prova Final Disponível</h3>
                                                     <p className="text-sm text-gray-600">
-                                                        {quizConfig.perguntas?.length || 0} perguntas • Nota mínima: {quizConfig.nota_minima || 70}%
+                                                        Parabéns! Você concluiu todos os vídeos. Agora pode fazer o quiz para obter seu certificado.
                                                     </p>
                                                 </div>
                                                 <Button
-                                                    onClick={() => setShowQuizModal(true)}
+                                                    onClick={handleStartQuizCheck}
                                                     className="bg-era-green hover:bg-era-green/90 text-era-black"
                                                 >
                                                     <FileText className="h-4 w-4 mr-2" />
-                                                    Apresentar Prova
+                                                    Começar Quiz
                                                 </Button>
                                             </div>
                                         </div>
@@ -737,8 +899,8 @@ const CursoDetalhe = () => {
                             ) : (
                                 <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
                                     <Video className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                    <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum vídeo selecionado</h3>
-                                    <p className="text-gray-600">Selecione um vídeo da lista ao lado para começar a assistir.</p>
+                                    <h3 className="text-lg font-medium text-gray-900 mb-2">Selecione um vídeo para começar</h3>
+                                    <p className="text-gray-600">Clique em um vídeo da lista ao lado para iniciar seus estudos.</p>
                                 </div>
                             )}
 
@@ -753,6 +915,7 @@ const CursoDetalhe = () => {
                                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                                     <Video className="h-5 w-5 text-era-green" />
                                     Vídeos do Curso
+                                    {isNVIDIACourse && !glossaryCompleted && <Lock className="h-4 w-4 text-amber-500" />}
                                 </h3>
 
                                 {filteredVideos.length === 0 ? (
@@ -768,20 +931,25 @@ const CursoDetalhe = () => {
                                                 videoProgress?.concluido === true ||
                                                 (videoProgress?.percentual_assistido && videoProgress.percentual_assistido >= 90)
                                             const isSelected = selectedVideo?.id === video.id
+                                            const isLocked = isNVIDIACourse && !glossaryCompleted
 
                                             return (
                                                 <div
                                                     key={video.id}
-                                                    className={`p-3 rounded-lg cursor-pointer transition-all duration-200 ${
-                                                        isSelected
-                                                            ? "bg-era-green/20 border border-era-green/30"
-                                                            : "bg-gray-50 hover:bg-gray-100 border border-transparent"
+                                                    className={`p-3 rounded-lg transition-all duration-200 ${
+                                                        isLocked
+                                                            ? "bg-gray-100 cursor-not-allowed opacity-60"
+                                                            : isSelected
+                                                                ? "bg-era-green/20 border border-era-green/30 cursor-pointer"
+                                                                : "bg-gray-50 hover:bg-gray-100 border border-transparent cursor-pointer"
                                                     }`}
-                                                    onClick={() => setSelectedVideo(video)}
+                                                    onClick={() => !isLocked && setSelectedVideo(video)}
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         <div className="flex-shrink-0">
-                                                            {isCompleted ? (
+                                                            {isLocked ? (
+                                                                <Lock className="h-5 w-5 text-gray-400" />
+                                                            ) : isCompleted ? (
                                                                 <CheckCircle className="h-5 w-5 text-era-green" />
                                                             ) : (
                                                                 <Play className="h-5 w-5 text-gray-400" />
@@ -794,11 +962,12 @@ const CursoDetalhe = () => {
                                                                 <span className="text-xs text-gray-500">
                                   {video.duracao ? `${Math.round(video.duracao / 60)} min` : "Duração não definida"}
                                 </span>
-                                                                {videoProgress && (
+                                                                {videoProgress && !isLocked && (
                                                                     <span className="text-xs text-era-green font-medium">
                                     {Math.round(videoProgress.percentual_assistido || 0)}% completo
                                   </span>
                                                                 )}
+                                                                {isLocked && <span className="text-xs text-amber-600 font-medium">Bloqueado</span>}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -809,8 +978,8 @@ const CursoDetalhe = () => {
                                 )}
                             </div>
 
-                            {/* Estatísticas */}
-                            {videos.length > 0 && (
+                            {/* Estatísticas - only show if not locked */}
+                            {(!isNVIDIACourse || glossaryCompleted) && videos.length > 0 && (
                                 <div className="bg-white rounded-2xl shadow-lg p-6">
                                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                                         <Award className="h-5 w-5 text-era-green" />
