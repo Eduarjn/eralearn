@@ -92,7 +92,7 @@ export function useVideoProgress(
     const saveProgress = useCallback(
         async (tempoAssistido: number, tempoTotal: number, concluido?: boolean) => {
             if (!userId || !videoId || !cursoId) {
-                console.log("Dados insuficientes para salvar progresso:", { userId, videoId, cursoId })
+                console.log("  Dados insuficientes para salvar progresso:", { userId, videoId, cursoId })
                 return
             }
 
@@ -101,18 +101,29 @@ export function useVideoProgress(
 
             const percentualCalculado = validTempoTotal > 0 ? Math.min((validTempoAssistido / validTempoTotal) * 100, 100) : 0
 
-            const isCompleted = wasCompleted || concluido || (percentualCalculado >= 90 && !wasCompleted)
+            const isCompleted = wasCompleted || concluido || (percentualCalculado >= 100 && !wasCompleted)
+
+            console.log("  saveProgress called:", {
+                videoId,
+                tempoAssistido: validTempoAssistido,
+                tempoTotal: validTempoTotal,
+                percentualCalculado,
+                isCompleted,
+                wasCompleted,
+                concluido,
+            })
 
             setProgress((prev) => ({
                 ...prev,
                 tempoAssistido: Math.round(validTempoAssistido),
                 tempoTotal: Math.round(validTempoTotal),
-                percentualAssistido: wasCompleted ? 100 : Math.round(percentualCalculado),
+                percentualAssistido: wasCompleted || isCompleted ? 100 : Math.round(percentualCalculado),
                 concluido: isCompleted,
                 dataConclusao: isCompleted ? prev.dataConclusao || new Date().toISOString() : prev.dataConclusao,
             }))
 
             if (wasCompleted && !concluido) {
+                console.log("Video already completed, skipping database update")
                 return
             }
 
@@ -145,16 +156,20 @@ export function useVideoProgress(
                     wasCompleted,
                 })
 
+                const percentualFinal = wasCompleted || concluido ? 100 : Math.round((tempoAssistido / tempoTotal) * 100)
+
                 const progressData = {
-                    user_id: userId!,
+                    usuario_id: userId!,
                     video_id: videoId!,
                     curso_id: cursoId!,
                     tempo_assistido: Math.round(tempoAssistido),
                     tempo_total: Math.round(tempoTotal),
-                    percentual_assistido: wasCompleted || concluido ? 100 : Math.round((tempoAssistido / tempoTotal) * 100),
+                    percentual_assistido: percentualFinal,
                     concluido: wasCompleted || concluido,
                     data_conclusao: wasCompleted || concluido ? new Date().toISOString() : null,
                 }
+
+                console.log("  Progress data to save:", progressData)
 
                 const result = await supabase
                     .from("video_progress")
@@ -172,8 +187,12 @@ export function useVideoProgress(
 
                 console.log("Progresso salvo com sucesso:", result.data)
                 setVideoProgressId(result.data.id)
+
+                if (result.data.concluido) {
+                    setWasCompleted(true)
+                }
             } catch (error) {
-                console.error("Erro ao salvar progresso:", error)
+                console.error("  Erro ao salvar progresso:", error)
             }
         },
         [userId, videoId, cursoId, wasCompleted],
@@ -190,7 +209,7 @@ export function useVideoProgress(
                 .from("video_progress")
                 .upsert(
                     {
-                        user_id: userId,
+                        usuario_id: userId,
                         video_id: videoId,
                         curso_id: cursoId,
                         concluido: true,

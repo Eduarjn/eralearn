@@ -20,6 +20,7 @@ export function useOptionalQuiz(courseId: string) {
         quizAlreadyCompleted: false,
     })
     const [loading, setLoading] = useState(false)
+    const [lastCheckTime, setLastCheckTime] = useState<number>(Date.now())
 
     // Verificar se curso foi concluído e se quiz já foi completado
     const checkCourseCompletion = useCallback(async () => {
@@ -194,9 +195,50 @@ export function useOptionalQuiz(courseId: string) {
         checkCourseCompletion()
     }, [checkCourseCompletion])
 
+    // Realtime subscription para mudanças no progresso dos vídeos
+    useEffect(() => {
+        if (!courseId || !userProfile?.id) return
+
+        const channel = supabase
+            .channel(`video-progress-${courseId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'video_progress',
+                    filter: `user_id=eq.${userProfile.id}`
+                },
+                (payload) => {
+                    console.log('📡 Realtime: Video progress changed', payload)
+                    setLastCheckTime(Date.now())
+                    setTimeout(() => {
+                        checkCourseCompletion()
+                    }, 1000)
+                }
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [courseId, userProfile?.id, checkCourseCompletion])
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const timeSinceLastCheck = Date.now() - lastCheckTime
+            if (timeSinceLastCheck < 30000) {
+                checkCourseCompletion()
+            }
+        }, 10000)
+
+        return () => clearInterval(interval)
+    }, [lastCheckTime, checkCourseCompletion])
+
     return {
         quizState,
         loading,
         checkCourseCompletion,
+        lastCheckTime,
     }
 }

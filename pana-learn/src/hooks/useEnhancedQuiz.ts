@@ -93,9 +93,8 @@ export function useEnhancedQuiz(userId: string | undefined, courseId: string | u
                 throw new Error("Erro ao verificar progresso dos vídeos")
             }
 
-            // Verificar se todos os vídeos foram concluídos
             const totalVideos = videos.length
-            const completedVideos = progress?.filter((p) => p.concluido === true || p.percentual_assistido >= 90).length || 0
+            const completedVideos = progress?.filter((p) => p.concluido === true || p.percentual_assistido >= 100).length || 0
 
             const allVideosCompleted = completedVideos === totalVideos
 
@@ -341,7 +340,63 @@ export function useEnhancedQuiz(userId: string | undefined, courseId: string | u
         if (userId && courseId) {
             checkQuizAvailability()
         }
-    }, [userId, courseId, checkQuizAvailability])
+    }, [userId, courseId])
+
+    // Realtime subscription para mudanças no progresso do quiz
+    useEffect(() => {
+        if (!userId || !courseId) return
+
+        const channel = supabase
+            .channel(`quiz-progress-${courseId}`)
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "progresso_quiz",
+                    filter: `usuario_id=eq.${userId}`,
+                },
+                (payload) => {
+                    console.log("📡 Realtime: Quiz progress changed", payload)
+                    // Recarregar progresso e certificado
+                    if (quizConfig) {
+                        loadUserAttempts(quizConfig.id)
+                        loadCertificate(courseId)
+                    }
+                },
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [userId, courseId])
+
+    // Realtime subscription para certificados
+    useEffect(() => {
+        if (!userId || !courseId) return
+
+        const channel = supabase
+            .channel(`certificates-${courseId}`)
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "certificados",
+                    filter: `usuario_id=eq.${userId}`,
+                },
+                (payload) => {
+                    console.log("📡 Realtime: Certificate changed", payload)
+                    loadCertificate(courseId)
+                },
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [userId, courseId])
 
     return {
         quizConfig,

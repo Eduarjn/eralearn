@@ -94,16 +94,16 @@ const Certificados: React.FC = () => {
     const loadCertificates = async () => {
         try {
             setLoading(true)
-            console.log("🔍 Iniciando carregamento de certificados...")
-            console.log("👤 UserProfile:", userProfile)
+            console.log(" Iniciando carregamento de certificados...")
+            console.log(" UserProfile:", userProfile)
 
             // Verificar se é admin
             const isAdmin = userProfile?.tipo_usuario === "admin" || userProfile?.tipo_usuario === "admin_master"
-            console.log("👤 Tipo de usuário:", userProfile?.tipo_usuario, "É admin:", isAdmin)
+            console.log("Tipo de usuário:", userProfile?.tipo_usuario, "É admin:", isAdmin)
 
             if (isAdmin) {
                 // Para administradores: buscar TODOS os certificados do Supabase
-                console.log("🔍 Buscando certificados do Supabase (admin)...")
+                console.log("Buscando certificados do Supabase (admin)...")
 
                 try {
                     // Primeiro, tentar buscar sem joins para ver se há dados básicos

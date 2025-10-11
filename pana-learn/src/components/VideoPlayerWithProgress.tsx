@@ -173,8 +173,7 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
                     saveProgress(time, videoDuration)
                 }
 
-                // Verificar se chegou ao fim do vídeo (90% ou mais) - apenas uma vez
-                if (time >= videoDuration * 0.9 && !progress.concluido && !completionChecked) {
+                if (time >= videoDuration * 1.0 && !progress.concluido && !completionChecked) {
                     setCompletionChecked(true)
                     handleVideoCompletion()
                 }
@@ -291,10 +290,9 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
         setHasUserInteracted(true)
 
         if (isYouTube) {
-            // Para YouTube, apenas marcar como concluído se necessário
             if (!progress.concluido && duration > 0) {
                 const progressPercent = (currentTime / duration) * 100
-                if (progressPercent >= 90) {
+                if (progressPercent >= 100) {
                     handleVideoCompletion()
                 }
             }
