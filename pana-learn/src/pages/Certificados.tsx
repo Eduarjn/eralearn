@@ -62,7 +62,8 @@ interface CertificateIndexEntry {
         NOME_COMPLETO: string
         CURSO: string
     }
-    pathRelativo: string
+    pathRelativo?: string
+    status?: "ativo" | "revogado" | "expirado" | string
 }
 
 const Certificados: React.FC = () => {
@@ -112,18 +113,18 @@ const Certificados: React.FC = () => {
                         .select("*")
                         .order("data_emissao", { ascending: false })
 
-                    console.log("🔍 Dados básicos:", basicData)
-                    console.log("🔍 Erro básico:", basicError)
+                    console.log("Dados básicos:", basicData)
+                    console.log("Erro básico:", basicError)
 
                     if (basicError) {
-                        console.error("❌ Erro ao buscar certificados básicos:", basicError)
+                        console.error("Erro ao buscar certificados básicos:", basicError)
                         setCertificates([])
                         calculateStats([])
                         return
                     }
 
                     if (!basicData || basicData.length === 0) {
-                        console.log("⚠️ Nenhum certificado encontrado na tabela")
+                        console.log("Nenhum certificado encontrado na tabela")
                         setCertificates([])
                         calculateStats([])
                         return
@@ -140,25 +141,26 @@ const Certificados: React.FC = () => {
                         .order("data_emissao", { ascending: false })
 
                     if (error) {
-                        console.error("❌ Erro ao buscar certificados com joins:", error)
+                        console.error("Erro ao buscar certificados com joins:", error)
                         // Usar dados básicos se os joins falharem
-                        const formattedCertificates = basicData.map((cert) => ({
+                        const formattedCertificates: CertificateIndexEntry[] = (data ?? []).map((cert) => ({
                             id: cert.id,
                             tokensResumo: {
-                                NOME_COMPLETO: cert.usuario_nome || "Usuário",
-                                CURSO: cert.categoria_nome || cert.categoria || "Curso",
+                                NOME_COMPLETO: cert.usuario?.nome ?? cert.usuario_nome ?? "Usuário",
+                                CURSO: cert.curso?.nome ?? cert.curso_nome ?? cert.categoria_nome ?? "Curso",
                             },
-                            templateKey: cert.categoria || "Geral",
-                            createdAt: cert.data_emissao || cert.data_criacao,
-                            status: cert.status || "ativo",
+                            templateKey: cert.categoria ?? "Geral",
+                            createdAt: cert.data_emissao ?? cert.data_criacao ?? new Date().toISOString(),
+                            status: cert.status ?? "ativo",
+                            pathRelativo: `/certificados/${cert.id}`,
                         }))
 
-                        console.log("✅ Usando dados básicos formatados:", formattedCertificates)
+                        console.log("Usando dados básicos formatados:", formattedCertificates)
                         setCertificates(formattedCertificates)
                         calculateStats(formattedCertificates)
                     } else {
-                        console.log("✅ Certificados encontrados (admin):", data?.length || 0)
-                        console.log("✅ Dados brutos:", data)
+                        console.log("Certificados encontrados (admin):", data?.length || 0)
+                        console.log("Dados brutos:", data)
 
                         const formattedCertificates =
                             data?.map((cert) => ({
@@ -505,6 +507,13 @@ const Certificados: React.FC = () => {
         )
     }
 
+    const ultimaEmissao =
+        certificates.length > 0
+            ? new Date(
+                Math.max(...certificates.map(c => new Date(c.createdAt).getTime()))
+            ).toLocaleDateString("pt-BR")
+            : "0";
+
     return (
         <ERALayout>
             <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-green-50">
@@ -742,9 +751,7 @@ const Certificados: React.FC = () => {
                                         <Clock className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
                                     </div>
                                     <div className="text-2xl lg:text-3xl font-bold text-white mb-1 lg:mb-2">
-                                        {certificates && certificates.length > 0
-                                            ? new Date(certificates[0].data_emissao).toLocaleDateString("pt-BR")
-                                            : "0"}
+                                        {ultimaEmissao}
                                     </div>
                                     <p className="text-white/90 font-medium text-sm lg:text-base">Última Emissão</p>
                                 </CardContent>
