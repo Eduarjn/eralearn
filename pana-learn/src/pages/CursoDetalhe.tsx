@@ -27,8 +27,7 @@ type VideoWithModulo = Database["public"]["Tables"]["videos"]["Row"] & {
     categoria?: string
 }
 
-type VideoProgressRow = Database["public"]["Tables"]["video_progress"]["Row"];
-
+type VideoProgressRow = Database["public"]["Tables"]["video_progress"]["Row"]
 
 const ModuleEditForm = ({ modulo, onSaved }: { modulo: Module; onSaved: () => void }) => {
     const [link, setLink] = React.useState(modulo.link_video || "")
@@ -81,7 +80,7 @@ function getModuleTitle(item: Module | { titulo?: string; nome_modulo?: string }
 }
 
 const CursoDetalhe = () => {
-    const { toast } = useToast();
+    const { toast } = useToast()
     const { id } = useParams()
     const { userProfile } = useAuth()
     const isAdmin = userProfile?.tipo_usuario === "admin" || userProfile?.tipo_usuario === "admin_master"
@@ -95,7 +94,7 @@ const CursoDetalhe = () => {
     }
 
     const [videos, setVideos] = React.useState<VideoWithModulo[]>([])
-    const [progress, setProgress] = React.useState<Record<string, Partial<VideoProgressRow>>>({});
+    const [progress, setProgress] = React.useState<Record<string, Partial<VideoProgressRow>>>({})
 
     const [loading, setLoading] = useState(true)
     const [selectedVideo, setSelectedVideo] = React.useState<VideoWithModulo | null>(null)
@@ -165,7 +164,7 @@ const CursoDetalhe = () => {
             const { data, error } = await supabase
                 .from("video_progress")
                 .select("concluido")
-                 .eq("user_id", userId)
+                .eq("user_id", userId)
                 .eq("video_id", `glossary-${id}`)
                 .eq("concluido", true)
                 .maybeSingle()
@@ -224,7 +223,7 @@ const CursoDetalhe = () => {
             const { data: progressData } = await supabase
                 .from("video_progress")
                 .select("video_id, concluido, percentual_assistido")
-                 .eq("user_id", userId)
+                .eq("user_id", userId)
                 .in("video_id", videoIds)
 
             if (progressData) {
@@ -354,7 +353,7 @@ const CursoDetalhe = () => {
         const { data: progressData, error: progressError } = await supabase
             .from("video_progress")
             .select("*")
-             .eq("user_id", userId)
+            .eq("user_id", userId)
             .in(
                 "video_id",
                 finalVideos.map((v) => v.id),
@@ -416,7 +415,7 @@ const CursoDetalhe = () => {
     const handleVideoProgressChange = useCallback(
         (videoId: string, progressPercent: number) => {
             setProgress((prev) => {
-                const next = { ...prev };
+                const next = { ...prev }
 
                 if (next[videoId]) {
                     next[videoId] = {
@@ -425,11 +424,11 @@ const CursoDetalhe = () => {
                         concluido: progressPercent >= 100 ? true : Boolean(next[videoId]?.concluido),
                         data_ultimo_acesso: new Date().toISOString(),
                         data_atualizacao: new Date().toISOString(),
-                    };
+                    }
                 } else {
                     const base: Partial<VideoProgressRow> = {
                         id: `temp-${videoId}`,
-                        usuario_id: userId || "",
+                        user_id: userId || "",
                         video_id: videoId,
                         curso_id: id || "",
                         modulo_id: (typeof selectedModule?.id === "string" ? selectedModule.id : "") as any,
@@ -441,25 +440,25 @@ const CursoDetalhe = () => {
                         data_ultimo_acesso: new Date().toISOString(),
                         data_criacao: new Date().toISOString(),
                         data_atualizacao: new Date().toISOString(),
-                    };
-
-                    if (progressPercent >= 100) {
-                        base.data_conclusao = new Date().toISOString();
                     }
 
-                    next[videoId] = base satisfies Partial<VideoProgressRow>;
+                    if (progressPercent >= 100) {
+                        base.data_conclusao = new Date().toISOString()
+                    }
+
+                    next[videoId] = base satisfies Partial<VideoProgressRow>
                 }
-                return next;
-            });
+                return next
+            })
 
             if (progressPercent >= 100) {
                 setTimeout(() => {
-                    calculateCourseProgress();
-                }, 500);
+                    calculateCourseProgress()
+                }, 500)
             }
         },
-        [calculateCourseProgress, userId, id, selectedModule?.id]
-    );
+        [calculateCourseProgress, userId, id, selectedModule?.id],
+    )
 
     const handleCourseComplete = useCallback(
         async (courseId: string) => {

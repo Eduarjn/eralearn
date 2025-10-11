@@ -99,9 +99,20 @@ export function useQuiz(userId: string | undefined, courseId: string | undefined
                 return
             }
 
+            console.log("🎯 Progress data from database:", progressData)
+            console.log("🎯 Video IDs being checked:", videoIds)
+
             const completedVideos =
-                progressData?.filter((p) => p.concluido === true || (p.percentual_assistido && p.percentual_assistido >= 90))
-                    .length || 0
+                progressData?.filter((p) => {
+                    const isCompleted = p.concluido === true || (p.percentual_assistido && p.percentual_assistido >= 100)
+                    console.log("🎯 Video progress check:", {
+                        video_id: p.video_id,
+                        concluido: p.concluido,
+                        percentual: p.percentual_assistido,
+                        isCompleted,
+                    })
+                    return isCompleted
+                }).length || 0
 
             const allVideosCompleted = completedVideos === videos.length
             console.log("🎯 Video completion check:", {

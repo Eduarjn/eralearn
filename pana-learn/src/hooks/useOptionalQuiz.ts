@@ -202,20 +202,20 @@ export function useOptionalQuiz(courseId: string) {
         const channel = supabase
             .channel(`video-progress-${courseId}`)
             .on(
-                'postgres_changes',
+                "postgres_changes",
                 {
-                    event: '*',
-                    schema: 'public',
-                    table: 'video_progress',
-                    filter: `user_id=eq.${userProfile.id}`
+                    event: "*",
+                    schema: "public",
+                    table: "video_progress",
+                    filter: `user_id=eq.${userProfile.id}`,
                 },
                 (payload) => {
-                    console.log('📡 Realtime: Video progress changed', payload)
+                    console.log("📡 Realtime: Video progress changed", payload)
                     setLastCheckTime(Date.now())
                     setTimeout(() => {
                         checkCourseCompletion()
                     }, 1000)
-                }
+                },
             )
             .subscribe()
 

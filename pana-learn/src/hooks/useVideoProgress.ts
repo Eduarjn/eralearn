@@ -53,7 +53,7 @@ export function useVideoProgress(
                     .select("*")
                     .eq("user_id", userId)
                     .eq("video_id", videoId)
-                    .single()
+                    .maybeSingle()
 
                 if (error && error.code !== "PGRST116") {
                     console.error("Erro ao carregar progresso:", error)
@@ -159,7 +159,7 @@ export function useVideoProgress(
                 const percentualFinal = wasCompleted || concluido ? 100 : Math.round((tempoAssistido / tempoTotal) * 100)
 
                 const progressData = {
-                    usuario_id: userId!,
+                    user_id: userId!,
                     video_id: videoId!,
                     curso_id: cursoId!,
                     tempo_assistido: Math.round(tempoAssistido),
@@ -171,7 +171,7 @@ export function useVideoProgress(
 
                 console.log("  Progress data to save:", progressData)
 
-                const result = await supabase
+                const { data, error } = await supabase
                     .from("video_progress")
                     .upsert(progressData, {
                         onConflict: "user_id,video_id",
@@ -180,15 +180,15 @@ export function useVideoProgress(
                     .select()
                     .single()
 
-                if (result.error) {
-                    console.error("Erro ao salvar progresso:", result.error)
+                if (error) {
+                    console.error("Erro ao salvar progresso:", error)
                     return
                 }
 
-                console.log("Progresso salvo com sucesso:", result.data)
-                setVideoProgressId(result.data.id)
+                console.log("Progresso salvo com sucesso:", data)
+                setVideoProgressId(data.id)
 
-                if (result.data.concluido) {
+                if (data.concluido) {
                     setWasCompleted(true)
                 }
             } catch (error) {
@@ -205,11 +205,11 @@ export function useVideoProgress(
         try {
             console.log("Marcando vídeo como concluído")
 
-            const result = await supabase
+            const { data, error } = await supabase
                 .from("video_progress")
                 .upsert(
                     {
-                        usuario_id: userId,
+                        user_id: userId,
                         video_id: videoId,
                         curso_id: cursoId,
                         concluido: true,
@@ -224,19 +224,19 @@ export function useVideoProgress(
                 .select()
                 .single()
 
-            if (result.error) {
-                console.error("Erro ao marcar como concluído:", result.error)
+            if (error) {
+                console.error("Erro ao marcar como concluído:", error)
                 return
             }
 
-            if (result.data) {
-                console.log("Vídeo marcado como concluído:", result.data)
+            if (data) {
+                console.log("Vídeo marcado como concluído:", data)
                 setWasCompleted(true)
                 setProgress((prev) => ({
                     ...prev,
                     concluido: true,
                     percentualAssistido: 100,
-                    dataConclusao: result.data.data_conclusao,
+                    dataConclusao: data.data_conclusao,
                 }))
             }
         } catch (error) {
