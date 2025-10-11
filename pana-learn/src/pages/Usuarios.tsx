@@ -35,7 +35,7 @@ interface UserStats {
 }
 
 const Usuarios = () => {
-  const { userProfile } = useAuth();
+  const { userProfile, signUp } = useAuth();
   const isAdmin = userProfile?.tipo_usuario === 'admin';
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewUserForm, setShowNewUserForm] = useState(false);
@@ -47,6 +47,7 @@ const Usuarios = () => {
   const [newUser, setNewUser] = useState({
     nome: '',
     email: '',
+    senha: '',
     tipo: 'Cliente',
     status: 'Ativo'
   });
@@ -311,36 +312,33 @@ const Usuarios = () => {
   };
 
   const handleNewUserSubmit = async () => {
-    if (!newUser.nome || !newUser.email) {
-      toast({ title: 'Campos obrigatórios', description: 'Nome e email são obrigatórios', variant: 'destructive' });
+    if (!newUser.nome || !newUser.email || !newUser.senha) {
+      toast({ title: 'Campos obrigatórios', description: 'Nome, email e senha são obrigatórios', variant: 'destructive' });
+      return;
+    }
+
+    if (newUser.senha.length < 6) {
+      toast({ title: 'Senha inválida', description: 'A senha deve ter pelo menos 6 caracteres', variant: 'destructive' });
       return;
     }
 
     try {
-      // ✅ CORREÇÃO: Usar estrutura correta da tabela usuarios
-      const { error } = await supabase
-        .from('usuarios')
-        .insert({
-          nome: newUser.nome,
-          email: newUser.email,
-          tipo_usuario: newUser.tipo === 'Cliente' ? 'cliente' : 'admin' as Database['public']['Enums']['user_type'],
-          status: newUser.status === 'Ativo' ? 'ativo' : 'inativo' as Database['public']['Enums']['status_type']
-          // ✅ NOTA: user_id será NULL para usuários criados manualmente por admin
-          // Isso é aceitável para usuários que não fazem login via Supabase Auth
-        });
+      // Usar o hook signUp do useAuth para criar usuário com senha
+      const { error } = await signUp(
+        newUser.email,
+        newUser.senha,
+        newUser.nome,
+        newUser.tipo === 'Cliente' ? 'cliente' : 'admin',
+        '' // senha_validacao vazia para usuários criados por admin
+      );
 
       if (error) {
-        console.error('Erro ao criar usuário:', error);
-        if (error.code === '23505') { // unique_violation
-          toast({ title: 'Erro ao criar usuário', description: 'Email já existe no sistema', variant: 'destructive' });
-        } else {
-          throw error;
-        }
+        toast({ title: 'Erro ao criar usuário', description: error.message, variant: 'destructive' });
         return;
       }
 
       toast({ title: 'Usuário criado com sucesso!' });
-      setNewUser({ nome: '', email: '', tipo: 'Cliente', status: 'Ativo' });
+      setNewUser({ nome: '', email: '', senha: '', tipo: 'Cliente', status: 'Ativo' });
       setShowNewUserForm(false);
       fetchUsers();
     } catch (error) {
@@ -679,6 +677,17 @@ const Usuarios = () => {
                         type="email"
                         value={newUser.email}
                         onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                        className="h-10 lg:h-12 text-sm lg:text-base border-2 border-gray-200 focus:border-blue-500 rounded-lg lg:rounded-xl transition-all duration-300"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="senha">Senha *</Label>
+                      <Input
+                        id="senha"
+                        type="password"
+                        value={newUser.senha}
+                        onChange={(e) => setNewUser({ ...newUser, senha: e.target.value })}
+                        placeholder="Mínimo 6 caracteres"
                         className="h-10 lg:h-12 text-sm lg:text-base border-2 border-gray-200 focus:border-blue-500 rounded-lg lg:rounded-xl transition-all duration-300"
                       />
                     </div>

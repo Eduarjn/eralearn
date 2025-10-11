@@ -1,0 +1,18 @@
+# Comandos cURL para API de Upload de Vídeos
+# Servidor: 138.59.144.162:3001
+
+# Health Check
+curl http://138.59.144.162:3001/health
+
+# Listar vídeos
+curl http://138.59.144.162:3001/api/videos/list
+
+# Upload de vídeo
+curl -X POST \
+  -F "curso=Nome do Curso" \
+  -F "titulo=Título do Vídeo" \
+  -F "descricao=Descrição do vídeo" \
+  -F "duracao=15" \
+  -F "categoria=Categoria" \
+  -F "video=@/caminho/para/video.mp4" \
+  http://138.59.144.162:3001/api/videos/upload-local
