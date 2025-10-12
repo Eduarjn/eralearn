@@ -365,7 +365,7 @@ const Certificados: React.FC = () => {
             })
 
             // Abrir página de verificação em nova aba
-            window.open(`/verify/${certificate.id}`, "_blank")
+            window.open(`/certificado/${certificate.id}`, "_blank")
         } catch (error) {
             console.error("❌ Erro ao visualizar certificado:", error)
             toast({
