@@ -28,6 +28,7 @@ import { AITokenManagement } from '@/pages/AITokenManagement';
 import { CadastroTest } from '@/components/CadastroTest';
 import ResetPassword from '@/pages/ResetPassword';
 import { ImageDiagnostic } from '@/components/ImageDiagnostic';
+import { EraThemeDemo } from '@/components/EraThemeDemo';
 import GerenciarOrdemVideos from '@/pages/admin/GerenciarOrdemVideos';
 import { runDiagnostics } from '@/utils/debug-env';
 // import AIModulePage from '@/pages/admin/ai';
@@ -55,6 +56,7 @@ const App = () => {
                 <Route path="/test" element={<TestComponent />} />
                 <Route path="/cadastro-test" element={<CadastroTest />} />
                 <Route path="/image-diagnostic" element={<ImageDiagnostic />} />
+                <Route path="/era-theme-demo" element={<EraThemeDemo />} />
                 <Route path="/" element={<Index />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route 

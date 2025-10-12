@@ -1,0 +1,216 @@
+/* ========================================
+   ERA THEME DESIGN TOKENS
+   ======================================== */
+
+:root {
+  /* Fallbacks do tema atual (mantêm o visual existente se o tema não estiver ativo) */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-heading: var(--font-sans);
+  
+  /* Cores padrão (neutras para não afetar o tema atual) */
+  --brand-primary: 0 0 0;
+  --brand-dark: 0 0 0;
+  --brand-muted: 0 0 0;
+  --brand-sand: 0 0 0;
+  
+  /* Cores de contraste para acessibilidade */
+  --brand-primary-foreground: 255 255 255;
+  --brand-dark-foreground: 255 255 255;
+  --brand-muted-foreground: 0 0 0;
+  --brand-sand-foreground: 0 0 0;
+}
+
+/* ========================================
+   TEMA ERA – só ativa quando .theme-era estiver no <html> ou <body>
+   ======================================== */
+.theme-era {
+  /* Cores do tema ERA */
+  --brand-primary: 207 255 0;      /* #CFFF00 - Verde limão vibrante */
+  --brand-dark: 43 54 61;          /* #2B363D - Azul escuro elegante */
+  --brand-muted: 157 182 195;      /* #9DB6C3 - Azul acinzentado suave */
+  --brand-sand: 204 196 165;       /* #CCC4A5 - Bege areia quente */
+  
+  /* Cores de contraste otimizadas para acessibilidade */
+  --brand-primary-foreground: 43 54 61;    /* Texto escuro sobre verde limão */
+  --brand-dark-foreground: 255 255 255;    /* Texto branco sobre azul escuro */
+  --brand-muted-foreground: 43 54 61;      /* Texto escuro sobre azul acinzentado */
+  --brand-sand-foreground: 43 54 61;       /* Texto escuro sobre bege areia */
+
+  /* Fontes do tema ERA */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-heading: "Manrope", var(--font-sans);
+  
+  /* Variáveis de espaçamento e sombras específicas do tema ERA */
+  --era-shadow-sm: 0 1px 2px 0 rgb(var(--brand-dark) / 0.05);
+  --era-shadow-md: 0 4px 6px -1px rgb(var(--brand-dark) / 0.1), 0 2px 4px -1px rgb(var(--brand-dark) / 0.06);
+  --era-shadow-lg: 0 10px 15px -3px rgb(var(--brand-dark) / 0.1), 0 4px 6px -2px rgb(var(--brand-dark) / 0.05);
+  
+  /* Bordas arredondadas específicas do tema ERA */
+  --era-radius-sm: 0.375rem;
+  --era-radius-md: 0.5rem;
+  --era-radius-lg: 0.75rem;
+  --era-radius-xl: 1rem;
+}
+
+/* ========================================
+   FONTES AUTOHOSPEDADAS (OPCIONAL)
+   ======================================== */
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter-Regular.woff2") format("woff2"),
+       url("/fonts/Inter-Regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter-Medium.woff2") format("woff2"),
+       url("/fonts/Inter-Medium.woff") format("woff");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter-SemiBold.woff2") format("woff2"),
+       url("/fonts/Inter-SemiBold.woff") format("woff");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter-Bold.woff2") format("woff2"),
+       url("/fonts/Inter-Bold.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/Manrope-Regular.woff2") format("woff2"),
+       url("/fonts/Manrope-Regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/Manrope-Medium.woff2") format("woff2"),
+       url("/fonts/Manrope-Medium.woff") format("woff");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/Manrope-SemiBold.woff2") format("woff2"),
+       url("/fonts/Manrope-SemiBold.woff") format("woff");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/Manrope-Bold.woff2") format("woff2"),
+       url("/fonts/Manrope-Bold.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ========================================
+   UTILITÁRIOS ESPECÍFICOS DO TEMA ERA
+   ======================================== */
+.theme-era .era-text-primary {
+  color: rgb(var(--brand-primary));
+}
+
+.theme-era .era-text-dark {
+  color: rgb(var(--brand-dark));
+}
+
+.theme-era .era-text-muted {
+  color: rgb(var(--brand-muted));
+}
+
+.theme-era .era-text-sand {
+  color: rgb(var(--brand-sand));
+}
+
+.theme-era .era-bg-primary {
+  background-color: rgb(var(--brand-primary));
+  color: rgb(var(--brand-primary-foreground));
+}
+
+.theme-era .era-bg-dark {
+  background-color: rgb(var(--brand-dark));
+  color: rgb(var(--brand-dark-foreground));
+}
+
+.theme-era .era-bg-muted {
+  background-color: rgb(var(--brand-muted));
+  color: rgb(var(--brand-muted-foreground));
+}
+
+.theme-era .era-bg-sand {
+  background-color: rgb(var(--brand-sand));
+  color: rgb(var(--brand-sand-foreground));
+}
+
+.theme-era .era-border-primary {
+  border-color: rgb(var(--brand-primary));
+}
+
+.theme-era .era-border-dark {
+  border-color: rgb(var(--brand-dark));
+}
+
+.theme-era .era-border-muted {
+  border-color: rgb(var(--brand-muted));
+}
+
+.theme-era .era-border-sand {
+  border-color: rgb(var(--brand-sand));
+}
+
+/* ========================================
+   ANIMAÇÕES ESPECÍFICAS DO TEMA ERA
+   ======================================== */
+.theme-era .era-transition {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-era .era-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--era-shadow-lg);
+}
+
+.theme-era .era-hover-glow:hover {
+  box-shadow: 0 0 20px rgb(var(--brand-primary) / 0.3);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

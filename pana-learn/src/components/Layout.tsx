@@ -35,7 +35,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
 
         {/* Main content */}
-        <div className="flex-1 lg:pl-64">
+        <div className="flex-1">
           {/* Top bar */}
           <div className="bg-white border-b px-4 py-3 flex items-center justify-between lg:px-6">
             <div className="flex items-center space-x-4">

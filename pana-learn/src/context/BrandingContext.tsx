@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 
 interface BrandingConfig {
   logo_url: string;
@@ -60,13 +60,8 @@ export const BrandingProvider: React.FC<BrandingProviderProps> = ({ children }) 
       try {
         setLoading(true);
         
-        // Tentar carregar do banco de dados
-        const { data, error } = await supabase
-          .from('branding_config')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+        // Tentar carregar do banco de dados usando função SQL
+        const { data, error } = await supabase.rpc('get_branding_config');
 
         if (error) {
           console.error('Erro ao carregar branding do banco:', error);
@@ -82,10 +77,11 @@ export const BrandingProvider: React.FC<BrandingProviderProps> = ({ children }) 
           } else {
             setBranding(defaultBranding);
           }
-        } else if (data) {
-          console.log('🔍 Branding carregado do banco:', data);
-          setBranding(data);
+        } else if (data && data.success && data.data) {
+          console.log('🔍 Branding carregado do banco:', data.data);
+          setBranding(data.data);
         } else {
+          console.log('🔍 Nenhum dado de branding encontrado, usando padrão');
           setBranding(defaultBranding);
         }
       } catch (error) {
@@ -108,23 +104,42 @@ export const BrandingProvider: React.FC<BrandingProviderProps> = ({ children }) 
   // Função para atualizar branding no banco
   const updateBrandingInDB = async (updates: Partial<BrandingConfig>) => {
     try {
-      const { data, error } = await supabase
-        .from('branding_config')
-        .update(updates)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .select()
-        .single();
+      // Construir parâmetros para a função SQL
+      const params: Record<string, string> = {};
+      
+      if (updates.logo_url) params.p_logo_url = updates.logo_url;
+      if (updates.sub_logo_url) params.p_sub_logo_url = updates.sub_logo_url;
+      if (updates.favicon_url) params.p_favicon_url = updates.favicon_url;
+      if (updates.background_url) params.p_background_url = updates.background_url;
+      if (updates.primary_color) params.p_primary_color = updates.primary_color;
+      if (updates.secondary_color) params.p_secondary_color = updates.secondary_color;
+      if (updates.company_name) params.p_company_name = updates.company_name;
+      if (updates.company_slogan) params.p_company_slogan = updates.company_slogan;
+
+      // Chamar função SQL para atualizar
+      const { data, error } = await supabase.rpc('update_branding_config', params);
 
       if (error) {
         console.error('Erro ao atualizar branding:', error);
         throw error;
       }
 
-      if (data) {
-        setBranding(data);
-        // Salvar no localStorage como backup
-        localStorage.setItem('era-learn-branding', JSON.stringify(data));
+      if (data && data.success) {
+        // Recarregar configurações atualizadas
+        const { data: updatedData, error: fetchError } = await supabase.rpc('get_branding_config');
+        
+        if (fetchError) {
+          console.error('Erro ao buscar branding atualizado:', fetchError);
+          throw fetchError;
+        }
+
+        if (updatedData && updatedData.success && updatedData.data) {
+          setBranding(updatedData.data);
+          // Salvar no localStorage como backup
+          localStorage.setItem('era-learn-branding', JSON.stringify(updatedData.data));
+        }
+      } else {
+        throw new Error(data?.message || 'Erro desconhecido ao atualizar branding');
       }
     } catch (error) {
       console.error('Erro ao atualizar branding:', error);
