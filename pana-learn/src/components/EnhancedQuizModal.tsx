@@ -42,7 +42,7 @@ interface QuizResult {
 }
 
 export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQuizComplete }: EnhancedQuizModalProps) {
-    const { user } = useAuth()
+    const { user, userProfile } = useAuth()
     const { toast } = useToast()
     const {
         quizConfig,
@@ -55,7 +55,7 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
         checkQuizAvailability,
         retryState,
         resetQuizForRetry,
-    } = useQuiz(user?.id, courseId)
+    } = useQuiz(userProfile?.id, courseId)
 
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
     const [answers, setAnswers] = useState<Record<string, number>>({})
@@ -128,11 +128,11 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
     }, [])
 
     useEffect(() => {
-        if (isOpen && user?.id && courseId) {
+        if (isOpen && userProfile?.id && courseId) {
             console.log("🎯 Modal opened, checking quiz availability...")
             checkQuizAvailability()
         }
-    }, [isOpen, user?.id, courseId, checkQuizAvailability])
+    }, [isOpen, userProfile?.id, courseId, checkQuizAvailability])
 
     useEffect(() => {
         if (!isOpen) {
@@ -212,7 +212,6 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                 if (!result.aprovado && retryState.nextRetryTime) {
                     setTimeout(() => {
                         setShowRetryCooldownPopup(true)
-                        onClose()
                     }, 2000)
                 }
 
@@ -594,7 +593,7 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                   {quizResult.acertos}/{quizResult.totalPerguntas} corretas
                 </span>
                                 <span>
-                  Mínimo: {Math.ceil((quizConfig?.nota_minima || 0) / 100) * quizResult.totalPerguntas}/
+                  Mínimo: {Math.ceil(((quizConfig?.nota_minima || 0) / 100) * quizResult.totalPerguntas)}/
                                     {quizResult.totalPerguntas}
                 </span>
                             </div>
@@ -609,7 +608,7 @@ export function EnhancedQuizModal({ courseId, courseName, isOpen, onClose, onQui
                                 <div>
                                     <span className="text-muted-foreground">Tentativa:</span>
                                     <div className="font-medium">
-                                        {quizResult.tentativa}/{QUIZ_CONFIG.MAX_ATTEMPTS}
+                                        {retryState.attemptsCount}/{QUIZ_CONFIG.MAX_ATTEMPTS}
                                     </div>
                                 </div>
                             </div>

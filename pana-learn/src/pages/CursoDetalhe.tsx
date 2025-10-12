@@ -574,11 +574,17 @@ const CursoDetalhe = () => {
                 },
                 (payload) => {
                     console.log("🔄 Real-time course progress update:", payload)
-                    setTimeout(() => {
-                        calculateCourseProgress()
-                        // Also refresh the videos and progress data
-                        fetchVideosAndProgress()
-                    }, 500)
+                    if (payload.eventType === "UPDATE" || payload.eventType === "INSERT") {
+                        const newProgress = payload.new as VideoProgressRow
+                        setProgress((prev) => ({
+                            ...prev,
+                            [newProgress.video_id]: newProgress,
+                        }))
+                        // Recalculate progress without full reload
+                        setTimeout(() => {
+                            calculateCourseProgress()
+                        }, 500)
+                    }
                 },
             )
             .on(
