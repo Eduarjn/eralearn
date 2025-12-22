@@ -14,7 +14,7 @@ import { Progress } from "@/components/ui/progress"
 import CommentsSection from "@/components/CommentsSection"
 import { useOptionalQuiz } from "@/hooks/useOptionalQuiz"
 import { useCertificates } from "@/hooks/useCertificates"
-import { toast } from "@/components/ui/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 import VideoUpload from "@/components/VideoUpload"
 import { VideoInfo } from "@/components/VideoInfo"
 import { EnhancedQuizModal } from "@/components/EnhancedQuizModal"
@@ -26,6 +26,8 @@ type VideoWithModulo = Database["public"]["Tables"]["videos"]["Row"] & {
     modulo_id?: string
     categoria?: string
 }
+
+type VideoProgressRow = Database["public"]["Tables"]["video_progress"]["Row"]
 
 const ModuleEditForm = ({ modulo, onSaved }: { modulo: Module; onSaved: () => void }) => {
     const [link, setLink] = React.useState(modulo.link_video || "")
@@ -78,6 +80,7 @@ function getModuleTitle(item: Module | { titulo?: string; nome_modulo?: string }
 }
 
 const CursoDetalhe = () => {
+    const { toast } = useToast()
     const { id } = useParams()
     const { userProfile } = useAuth()
     const isAdmin = userProfile?.tipo_usuario === "admin" || userProfile?.tipo_usuario === "admin_master"
@@ -91,9 +94,8 @@ const CursoDetalhe = () => {
     }
 
     const [videos, setVideos] = React.useState<VideoWithModulo[]>([])
-    const [progress, setProgress] = React.useState<Record<string, Database["public"]["Tables"]["video_progress"]["Row"]>>(
-        {},
-    )
+    const [progress, setProgress] = React.useState<Record<string, Partial<VideoProgressRow>>>({})
+
     const [loading, setLoading] = useState(true)
     const [selectedVideo, setSelectedVideo] = React.useState<VideoWithModulo | null>(null)
     const [selectedModule, setSelectedModule] = React.useState<Module | null>(null)
@@ -119,7 +121,7 @@ const CursoDetalhe = () => {
     const currentCategory = currentCourseData?.categoria
     const { data: modules = [] } = useCourseModules(id || "")
 
-    const { quizState, loading: quizLoading, checkCourseCompletion } = useOptionalQuiz(id || "")
+    const { quizState, loading: quizLoading, checkCourseCompletion, lastCheckTime } = useOptionalQuiz(id || "")
 
     const {
         quizConfig,
@@ -132,7 +134,15 @@ const CursoDetalhe = () => {
         checkQuizAvailability,
     } = useEnhancedQuiz(userId, id)
 
-    const { generateCertificate } = useCertificates(userId)
+    const { generateCertificate, getCertificateByCourse } = useCertificates(userId)
+
+    // Revalidar quiz quando houver mudanças no progresso
+    React.useEffect(() => {
+        if (lastCheckTime && quizState.courseCompleted && !quizState.quizAlreadyCompleted) {
+            console.log("🔄 Course completed, showing quiz notification")
+            setShowQuizNotification(true)
+        }
+    }, [lastCheckTime, quizState.courseCompleted, quizState.quizAlreadyCompleted])
 
     const [glossaryCompleted, setGlossaryCompleted] = React.useState(false)
     const [checkingGlossary, setCheckingGlossary] = React.useState(true)
@@ -190,7 +200,7 @@ const CursoDetalhe = () => {
         if (!id || !userId) return
 
         try {
-            console.log("🔄 Calculating course progress:", { courseId: id, userId })
+            console.log("  Calculating course progress:", { courseId: id, userId })
 
             const { data: allVideos } = await supabase
                 .from("videos")
@@ -217,15 +227,16 @@ const CursoDetalhe = () => {
                 .in("video_id", videoIds)
 
             if (progressData) {
-                const completed = progressData.filter(
-                    (p) => p.concluido === true || (p.percentual_assistido && p.percentual_assistido >= 90),
-                ).length
-                setCompletedVideos(completed)
-                console.log(`🔄 Videos completed: ${completed}/${total}`)
+                const completedCount = progressData.filter((p) => {
+                    return p.concluido === true || p.percentual_assistido >= 100
+                }).length
+
+                setCompletedVideos(completedCount)
+                console.log(`  Videos completed: ${completedCount}/${total}`)
 
                 setProgressRefresh((prev) => prev + 1)
 
-                if (completed === total && total > 0) {
+                if (completedCount === total && total > 0) {
                     console.log("All videos completed! Checking quiz...")
                     setTimeout(() => {
                         checkCourseCompletion()
@@ -360,7 +371,7 @@ const CursoDetalhe = () => {
             console.log("✅ Progress loaded successfully:", progressData)
         }
 
-        const progressMap: Record<string, Database["public"]["Tables"]["video_progress"]["Row"]> = {}
+        const progressMap: Record<string, Partial<VideoProgressRow>> = {}
         ;(progressData || []).forEach((p) => {
             if (p.video_id) progressMap[p.video_id] = p
         })
@@ -403,40 +414,50 @@ const CursoDetalhe = () => {
 
     const handleVideoProgressChange = useCallback(
         (videoId: string, progressPercent: number) => {
-            console.log(`🔄 Video progress changed: ${videoId} - ${progressPercent}%`)
+            setProgress((prev) => {
+                const next = { ...prev }
 
-            setProgress((prevProgress) => {
-                const updatedProgress = { ...prevProgress }
-                if (updatedProgress[videoId]) {
-                    updatedProgress[videoId] = {
-                        ...updatedProgress[videoId],
+                if (next[videoId]) {
+                    next[videoId] = {
+                        ...next[videoId],
                         percentual_assistido: progressPercent,
-                        concluido: progressPercent >= 90 ? true : updatedProgress[videoId].concluido,
+                        concluido: progressPercent >= 100 ? true : Boolean(next[videoId]?.concluido),
+                        data_ultimo_acesso: new Date().toISOString(),
+                        data_atualizacao: new Date().toISOString(),
                     }
                 } else {
-                    // Create new progress entry if it doesn't exist
-                    updatedProgress[videoId] = {
+                    const base: Partial<VideoProgressRow> = {
                         id: `temp-${videoId}`,
                         user_id: userId || "",
                         video_id: videoId,
-                        percentual_assistido: progressPercent,
-                        concluido: progressPercent >= 90,
+                        curso_id: id || "",
+                        modulo_id: (typeof selectedModule?.id === "string" ? selectedModule.id : "") as any,
                         tempo_assistido: 0,
-                        data_inicio: new Date().toISOString(),
-                        data_conclusao: progressPercent >= 90 ? new Date().toISOString() : null,
+                        tempo_total: 0,
+                        percentual_assistido: progressPercent,
+                        concluido: progressPercent >= 100,
+                        data_primeiro_acesso: new Date().toISOString(),
+                        data_ultimo_acesso: new Date().toISOString(),
+                        data_criacao: new Date().toISOString(),
+                        data_atualizacao: new Date().toISOString(),
                     }
+
+                    if (progressPercent >= 100) {
+                        base.data_conclusao = new Date().toISOString()
+                    }
+
+                    next[videoId] = base satisfies Partial<VideoProgressRow>
                 }
-                return updatedProgress
+                return next
             })
 
-            // Trigger immediate progress recalculation for completed videos
-            if (progressPercent >= 90) {
+            if (progressPercent >= 100) {
                 setTimeout(() => {
                     calculateCourseProgress()
                 }, 500)
             }
         },
-        [calculateCourseProgress, userId],
+        [calculateCourseProgress, userId, id, selectedModule?.id],
     )
 
     const handleCourseComplete = useCallback(
@@ -457,8 +478,7 @@ const CursoDetalhe = () => {
                     .in("video_id", allVideos?.map((v) => v.id) || [])
 
                 const completedCount =
-                    progressData?.filter((p) => p.concluido === true || (p.percentual_assistido && p.percentual_assistido >= 90))
-                        .length || 0
+                    progressData?.filter((p) => p.concluido === true || p.percentual_assistido >= 100).length || 0
                 const totalCount = allVideos?.length || 0
 
                 console.log(`Final verification: ${completedCount}/${totalCount} videos completed`)
@@ -476,11 +496,11 @@ const CursoDetalhe = () => {
 
                         setTimeout(() => {
                             if (!certificate && !userProgress?.aprovado) {
-                                console.log("Showing quiz notification...")
+                                console.log("  Showing quiz notification...")
                                 setShowQuizNotification(true)
                                 setQuizShown(true)
                             } else {
-                                console.log("Quiz already completed or certificate exists")
+                                console.log("  Quiz already completed or certificate exists")
                             }
                         }, 1500)
                     }
@@ -503,7 +523,7 @@ const CursoDetalhe = () => {
             title: "Quiz concluído!",
             description: "Parabéns, você completou o quiz!",
         })
-    }, [checkQuizAvailability, calculateCourseProgress])
+    }, [checkQuizAvailability, calculateCourseProgress, toast])
 
     const createDefaultModules = async () => {
         if (!isAdmin && modules.length === 0 && videos.length > 0) {
@@ -554,11 +574,17 @@ const CursoDetalhe = () => {
                 },
                 (payload) => {
                     console.log("🔄 Real-time course progress update:", payload)
-                    setTimeout(() => {
-                        calculateCourseProgress()
-                        // Also refresh the videos and progress data
-                        fetchVideosAndProgress()
-                    }, 500)
+                    if (payload.eventType === "UPDATE" || payload.eventType === "INSERT") {
+                        const newProgress = payload.new as VideoProgressRow
+                        setProgress((prev) => ({
+                            ...prev,
+                            [newProgress.video_id]: newProgress,
+                        }))
+                        // Recalculate progress without full reload
+                        setTimeout(() => {
+                            calculateCourseProgress()
+                        }, 500)
+                    }
                 },
             )
             .on(
@@ -608,15 +634,13 @@ const CursoDetalhe = () => {
         if (videos.length > 0 && Object.keys(progress).length > 0) {
             const completedVideos = videos.filter((video) => {
                 const videoProgress = progress[video.id]
-                const isCompleted =
-                    videoProgress?.concluido === true ||
-                    (videoProgress?.percentual_assistido && videoProgress.percentual_assistido >= 90)
+                const isCompleted = videoProgress?.concluido === true || videoProgress?.percentual_assistido >= 100
                 return isCompleted
             })
 
             const allCompleted = completedVideos.length === videos.length
 
-            console.log(`Progress monitoring: ${completedVideos.length}/${videos.length} videos completed`)
+            console.log(`  Progress monitoring: ${completedVideos.length}/${videos.length} videos completed`)
 
             setCompletedVideos(completedVideos.length)
 
@@ -671,10 +695,8 @@ const CursoDetalhe = () => {
         videos.length > 0 &&
         videos.every((video) => {
             const videoProgress = progress[video.id]
-            return (
-                videoProgress?.concluido === true ||
-                (videoProgress?.percentual_assistido && videoProgress.percentual_assistido >= 90)
-            )
+            const isCompleted = videoProgress?.concluido === true || videoProgress?.percentual_assistido >= 100
+            return isCompleted
         })
 
     // React.useEffect(() => {
@@ -873,7 +895,10 @@ const CursoDetalhe = () => {
                                         titulo={selectedVideo.titulo}
                                         descricao={selectedVideo.descricao}
                                         duracao={selectedVideo.duracao}
-                                        progresso={progress[selectedVideo.id]}
+                                        progresso={{
+                                            percentual_assistido: progress[selectedVideo.id]?.percentual_assistido ?? 0,
+                                            concluido: Boolean(progress[selectedVideo.id]?.concluido),
+                                        }}
                                     />
 
                                     {isCourseComplete && (
@@ -928,8 +953,7 @@ const CursoDetalhe = () => {
                                         {videos.map((video, index) => {
                                             const videoProgress = progress[video.id]
                                             const isCompleted =
-                                                videoProgress?.concluido === true ||
-                                                (videoProgress?.percentual_assistido && videoProgress.percentual_assistido >= 90)
+                                                videoProgress?.concluido === true || videoProgress?.percentual_assistido >= 100
                                             const isSelected = selectedVideo?.id === video.id
                                             const isLocked = isNVIDIACourse && !glossaryCompleted
 
@@ -963,7 +987,7 @@ const CursoDetalhe = () => {
                                   {video.duracao ? `${Math.round(video.duracao / 60)} min` : "Duração não definida"}
                                 </span>
                                                                 {videoProgress && !isLocked && (
-                                                                    <span className="text-xs text-era-green font-medium">
+                                                                    <span className="text-xs text-era-black font-medium">
                                     {Math.round(videoProgress.percentual_assistido || 0)}% completo
                                   </span>
                                                                 )}
@@ -996,10 +1020,9 @@ const CursoDetalhe = () => {
                         {
                             videos.filter((v) => {
                                 const videoProgress = progress[v.id]
-                                return (
-                                    videoProgress?.concluido === true ||
-                                    (videoProgress?.percentual_assistido && videoProgress.percentual_assistido >= 90)
-                                )
+                                const isCompleted =
+                                    videoProgress?.concluido === true || videoProgress?.percentual_assistido >= 100
+                                return isCompleted
                             }).length
                         }
                       </span>

@@ -1,5 +1,6 @@
 "use client"
 
+import { BlurText } from '@/ui/BlurText';
 import { ERALayout } from "@/components/ERALayout"
 import { DashboardStats } from "@/components/DashboardStats"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -106,37 +107,68 @@ const Dashboard = () => {
                 {/* Hero Section com gradiente */}
                 <div
                     className="page-hero w-full rounded-xl lg:rounded-2xl flex flex-col md:flex-row justify-between items-center p-4 lg:p-8 mb-6 lg:mb-8 shadow-md"
-                    style={{ background: "linear-gradient(90deg, #000000 0%, #4A4A4A 40%, #34C759 100%)" }}
+                    style={{ background: "linear-gradient(135deg, #2b363d 30%, #4A4A4A 60%, #cfff00 100%)" }}
                 >
                     <div className="px-4 lg:px-6 py-6 lg:py-8 md:py-12 w-full">
                         <div className="max-w-7xl mx-auto">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 lg:gap-6">
                                 <div className="flex-1">
+                                    
+                                    {/* 1. Label (Delay 20ms) */}
                                     <div className="flex items-center gap-2 mb-2">
                                         <div className="w-2 h-2 bg-era-green rounded-full animate-pulse"></div>
-                                        <span className="text-xs lg:text-sm font-medium text-era-green">Plataforma de Ensino</span>
+                                        <BlurText 
+                                            text="Plataforma de Ensino"
+                                            className="text-xs lg:text-sm font-medium text-era-green m-0 p-0"
+                                            delay={20}
+                                            animateBy="words"
+                                        />
                                     </div>
-                                    <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 lg:mb-3 bg-gradient-to-r from-white to-era-green bg-clip-text text-transparent">
-                                        Bem-vindo de volta!
-                                    </h1>
-                                    <p className="text-sm sm:text-base lg:text-lg md:text-xl text-white max-w-2xl">
-                                        Você tem {featuredCourses.length} cursos em andamento. Continue aprendendo!
-                                    </p>
+
+                                    {/* 2. Título Principal (Delay 50ms) */}
+                                    <div className="mb-2 lg:mb-3">
+                                        <BlurText 
+                                            text="Bem-vindo! Estamos felizes em tê-lo conosco!"
+                                            // Mudei para text-white para garantir que a animação fique visível e brilhante
+                                            className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white m-0 p-0"
+                                            delay={30}
+                                            animateBy="words" // Frase longa fica melhor por palavras
+                                            direction="top"
+                                        />
+                                    </div>
+
+                                    {/* 3. Descrição com Variável (Delay 100ms) */}
+                                    <div className="mb-3 lg:mb-4 max-w-2xl">
+                                        <BlurText 
+                                            text={`Você tem ${featuredCourses.length} cursos em andamento. Continue aprendendo!`}
+                                            className="text-sm sm:text-base lg:text-lg md:text-xl text-white m-0 p-0"
+                                            delay={20}
+                                            animateBy="words"
+                                        />
+                                    </div>
+
+                                    {/* 4. Estatísticas (Delay 200ms) */}
                                     <div className="flex flex-wrap items-center gap-2 lg:gap-4 mt-3 lg:mt-4">
+                                        
                                         <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
                                             <BookOpen className="h-3 w-3 lg:h-4 lg:w-4 text-era-green" />
-                                            <span className="text-white">Cursos disponíveis</span>
+                                            <BlurText text="Cursos disponíveis" className="text-white m-0 p-0" delay={20} animateBy="words" />
                                         </div>
+
                                         <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
                                             <Clock className="h-3 w-3 lg:h-4 lg:w-4 text-era-green" />
-                                            <span className="text-white">Progresso contínuo</span>
+                                            <BlurText text="Progresso contínuo" className="text-white m-0 p-0" delay={20} animateBy="words" />
                                         </div>
+
                                         <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
                                             <Award className="h-3 w-3 lg:h-4 lg:w-4 text-era-green" />
-                                            <span className="text-white">Certificações</span>
+                                            <BlurText text="Certificações" className="text-white m-0 p-0" delay={20} animateBy="words" />
                                         </div>
+
                                     </div>
                                 </div>
+                                
+                                {/* Botão (Mantido igual) */}
                                 <Button
                                     onClick={handleViewAllCourses}
                                     className="bg-gradient-to-r from-era-black via-era-gray-medium to-era-green hover:from-era-black/90 hover:via-era-gray-medium/90 hover:to-era-green/90 text-white border border-era-green/30 backdrop-blur-sm font-medium px-4 lg:px-6 py-2 lg:py-3 rounded-lg lg:rounded-xl text-sm lg:text-base transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
@@ -188,7 +220,7 @@ const Dashboard = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {/* Card de Atividade Recente */}
                             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300">
-                                <CardHeader className="bg-gradient-to-r from-era-black via-era-gray-medium to-era-green text-white">
+                                <CardHeader className="bg-era-gray-medium text-white rounded-lg">
                                     <div className="flex items-center gap-2">
                                         <div className="p-2 bg-white/20 rounded-lg">
                                             <Clock className="h-5 w-5 text-white" />
@@ -220,7 +252,7 @@ const Dashboard = () => {
 
                             {/* Card de Progresso por Categoria */}
                             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300">
-                                <CardHeader className="bg-gradient-to-r from-era-black via-era-gray-medium to-era-green text-white">
+                                <CardHeader className="bg-era-gray-medium text-white rounded-lg">
                                     <div className="flex items-center gap-2">
                                         <div className="p-2 bg-white/20 rounded-lg">
                                             <TrendingUp className="h-5 w-5 text-white" />
@@ -388,7 +420,7 @@ const Dashboard = () => {
                                             <p className="text-era-gray-medium text-sm mb-4">{course.descricao}</p>
                                             <Button
                                                 onClick={() => handleStartCourse(course.id)}
-                                                className="w-full bg-gradient-to-r from-era-black via-era-gray-medium to-era-green hover:from-era-black/90 hover:via-era-gray-medium/90 hover:to-era-green/90 text-white shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
+                                                className="w-full bg-gradient-to-r from-gray-500 via-gray-600 to-gray-700 hover:from-gray-500/90 hover:via-gray-600/90 hover:to-gray-700/90 text-white shadow-lg hover:shadow-xl transition-all duration-300 font-semibold rounded-lg"
                                             >
                                                 Começar Curso
                                             </Button>

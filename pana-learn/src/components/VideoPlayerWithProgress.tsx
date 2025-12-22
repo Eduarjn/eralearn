@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useRef, useEffect, useState } from "react"
-import { CheckCircle, Play, Pause, Maximize2, SkipForward } from "lucide-react"
+import { CheckCircle, Play, Pause, Maximize2, SkipForward, Gauge } from "lucide-react" // Adicionei Gauge para ícone
 import { useVideoProgress } from "@/hooks/useVideoProgress"
 import { useSignedMediaUrl } from "@/hooks/useSignedMediaUrl"
 import { Button } from "@/components/ui/button"
@@ -37,19 +37,19 @@ interface VideoPlayerWithProgressProps {
 }
 
 export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = ({
-                                                                                    video,
-                                                                                    cursoId,
-                                                                                    moduloId,
-                                                                                    userId,
-                                                                                    onProgressChange,
-                                                                                    onCourseComplete,
-                                                                                    totalVideos,
-                                                                                    completedVideos,
-                                                                                    className = "",
-                                                                                    nextVideo,
-                                                                                    onNextVideo,
-                                                                                }) => {
-    const videoRef = useRef<HTMLVideoElement>(null)
+    video,
+    cursoId,
+    moduloId,
+    userId,
+    onProgressChange,
+    onCourseComplete,
+    totalVideos,
+    completedVideos,
+    className = "",
+    nextVideo,
+    onNextVideo,
+}) => {
+    // ✅ CORRIGIDO: Usa videoRef do hook ao invés de criar um novo
     const iframeRef = useRef<HTMLIFrameElement>(null)
     const [isPlaying, setIsPlaying] = useState(false)
     const [currentTime, setCurrentTime] = useState(0)
@@ -62,8 +62,13 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
     const [showRewatchDialog, setShowRewatchDialog] = useState(false)
     const [hasUserInteracted, setHasUserInteracted] = useState(false)
 
+    // ✅ NOVO: Estado para velocidade de reprodução
+    const [playbackRate, setPlaybackRate] = useState(1.0)
+
     const { toast } = useToast()
-    const { progress, saveProgress, markAsCompleted, checkRewatch, wasCompleted } = useVideoProgress(
+
+    // ✅ CORRIGIDO: Agora usa videoRef do hook
+    const { progress, saveProgress, markAsCompleted, checkRewatch, wasCompleted, videoRef } = useVideoProgress(
         userId,
         video.id,
         cursoId,
@@ -111,6 +116,14 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
         }
     }
 
+    // ✅ NOVO: Função para mudar a velocidade
+    const handleSpeedChange = (rate: number) => {
+        if (videoRef.current) {
+            videoRef.current.playbackRate = rate
+            setPlaybackRate(rate)
+        }
+    }
+
     const detectYouTube = () => {
         if (isYouTube) {
             // Para YouTube, usar duração do vídeo se disponível
@@ -149,7 +162,7 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
         }
     }, [isYouTube, video.duracao])
 
-    // Eventos de tempo do vídeo
+    // ✅ CORRIGIDO: Eventos de tempo do vídeo - REMOVIDO saveProgress durante timeupdate
     useEffect(() => {
         if (isYouTube) return // YouTube não suporta esses eventos via iframe
 
@@ -167,20 +180,19 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
             setCurrentTime(time)
             setDuration(videoDuration)
 
-            if (!wasCompleted) {
-                // Salvar progresso a cada 5 segundos
-                if (Math.floor(time) % 5 === 0 && Math.floor(time) !== Math.floor(progress.tempoAssistido)) {
-                    saveProgress(time, videoDuration)
-                }
+            // ✅ CORRIGIDO: Removido saveProgress durante timeupdate
+            // O hook useVideoProgress já salva automaticamente ao pausar/terminar
+            // Não precisa salvar durante a reprodução!
 
-                // Verificar se chegou ao fim do vídeo (90% ou mais) - apenas uma vez
-                if (time >= videoDuration * 0.9 && !progress.concluido && !completionChecked) {
+            if (!wasCompleted) {
+                // ✅ Mantido: Detecção de conclusão (mas sem salvar durante reprodução)
+                if (time >= videoDuration * 1.0 && !progress.concluido && !completionChecked) {
                     setCompletionChecked(true)
                     handleVideoCompletion()
                 }
             }
 
-            // Notificar mudança de progresso
+            // Notificar mudança de progresso para UI
             if (onProgressChange) {
                 const progressPercent = (time / videoDuration) * 100
                 onProgressChange(progressPercent)
@@ -192,11 +204,9 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
             videoElement.removeEventListener("timeupdate", handleTimeUpdate)
         }
     }, [
-        progress.tempoAssistido,
         progress.concluido,
         duration,
         isYouTube,
-        saveProgress,
         onProgressChange,
         completionChecked,
         wasCompleted,
@@ -291,10 +301,9 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
         setHasUserInteracted(true)
 
         if (isYouTube) {
-            // Para YouTube, apenas marcar como concluído se necessário
             if (!progress.concluido && duration > 0) {
                 const progressPercent = (currentTime / duration) * 100
-                if (progressPercent >= 90) {
+                if (progressPercent >= 100) {
                     handleVideoCompletion()
                 }
             }
@@ -437,9 +446,32 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
                         </div>
 
                         <span className="text-white text-sm font-mono">
-              {formatTime(currentTime)} / {formatTime(duration)}
-            </span>
+                            {formatTime(currentTime)} / {formatTime(duration)}
+                        </span>
                     </div>
+                </div>
+            </div>
+
+            {/* ✅ NOVO: Controles de Velocidade de Reprodução */}
+            <div className="flex items-center justify-between bg-secondary/20 p-2 rounded-md border border-border/50">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Gauge className="w-4 h-4" />
+                    <span className="font-medium">Velocidade:</span>
+                </div>
+                <div className="flex gap-1">
+                    {[1.0, 1.25, 1.5, 2.0].map((rate) => (
+                        <Button
+                            key={rate}
+                            variant={playbackRate === rate ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => handleSpeedChange(rate)}
+                            className={`h-7 px-3 text-xs font-medium transition-all ${
+                                playbackRate === rate ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-secondary"
+                            }`}
+                        >
+                            {rate}x
+                        </Button>
+                    ))}
                 </div>
             </div>
 
@@ -468,8 +500,8 @@ export const VideoPlayerWithProgress: React.FC<VideoPlayerWithProgressProps> = (
 
                     {progress.dataConclusao && (
                         <span className="text-xs text-gray-500">
-              Concluído em {new Date(progress.dataConclusao).toLocaleDateString()}
-            </span>
+                            Concluído em {new Date(progress.dataConclusao).toLocaleDateString()}
+                        </span>
                     )}
                 </div>
             </div>

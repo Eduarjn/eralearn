@@ -203,7 +203,7 @@ export const YouTubePlayerWithProgress: React.FC<YouTubePlayerWithProgressProps>
                         saveProgress(currentTime, duration)
                     }
 
-                    if (duration > 0 && currentTime >= duration * 0.9 && !progress.concluido && !completionChecked) {
+                    if (duration > 0 && currentTime >= duration * 1.0 && !progress.concluido && !completionChecked) {
                         setCompletionChecked(true)
                         handleVideoCompletion()
                     }

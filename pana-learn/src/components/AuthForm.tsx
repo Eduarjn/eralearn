@@ -191,7 +191,7 @@ export function AuthForm() {
                             src="/images/era-learn-logo.png"
                             alt="ERA Learn Logo"
                             id="login-logo"
-                            className="w-48 h-20 object-contain cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                            className="w-52 h-37 object-contain cursor-pointer transition-all duration-300 hover:scale-140 hover:shadow-lg"
                             style={{
                                 borderRadius: "8px",
                                 filter: "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))",
@@ -233,7 +233,9 @@ export function AuthForm() {
                         >
                             Entrar
                         </button>
-                        <button
+
+                        {/* Botão Cadastrar (COMENTADO PARA OCULTAR DA TELA) */}
+                        {/* <button
                             onClick={() => setActiveTab("register")}
                             className={`flex-1 py-3.5 px-6 rounded-xl text-sm font-semibold transition-all duration-300 ${
                                 activeTab === "register"
@@ -243,6 +245,7 @@ export function AuthForm() {
                         >
                             Cadastrar
                         </button>
+                        */}
                     </div>
 
                     {/* Título do formulário */}

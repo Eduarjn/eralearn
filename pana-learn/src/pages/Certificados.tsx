@@ -1,5 +1,5 @@
 "use client"
-
+import { BlurText } from '@/ui/BlurText';
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/useAuth"
@@ -62,7 +62,8 @@ interface CertificateIndexEntry {
         NOME_COMPLETO: string
         CURSO: string
     }
-    pathRelativo: string
+    pathRelativo?: string
+    status?: "ativo" | "revogado" | "expirado" | string
 }
 
 const Certificados: React.FC = () => {
@@ -94,16 +95,16 @@ const Certificados: React.FC = () => {
     const loadCertificates = async () => {
         try {
             setLoading(true)
-            console.log("🔍 Iniciando carregamento de certificados...")
-            console.log("👤 UserProfile:", userProfile)
+            console.log(" Iniciando carregamento de certificados...")
+            console.log(" UserProfile:", userProfile)
 
             // Verificar se é admin
             const isAdmin = userProfile?.tipo_usuario === "admin" || userProfile?.tipo_usuario === "admin_master"
-            console.log("👤 Tipo de usuário:", userProfile?.tipo_usuario, "É admin:", isAdmin)
+            console.log("Tipo de usuário:", userProfile?.tipo_usuario, "É admin:", isAdmin)
 
             if (isAdmin) {
                 // Para administradores: buscar TODOS os certificados do Supabase
-                console.log("🔍 Buscando certificados do Supabase (admin)...")
+                console.log("Buscando certificados do Supabase (admin)...")
 
                 try {
                     // Primeiro, tentar buscar sem joins para ver se há dados básicos
@@ -112,18 +113,18 @@ const Certificados: React.FC = () => {
                         .select("*")
                         .order("data_emissao", { ascending: false })
 
-                    console.log("🔍 Dados básicos:", basicData)
-                    console.log("🔍 Erro básico:", basicError)
+                    console.log("Dados básicos:", basicData)
+                    console.log("Erro básico:", basicError)
 
                     if (basicError) {
-                        console.error("❌ Erro ao buscar certificados básicos:", basicError)
+                        console.error("Erro ao buscar certificados básicos:", basicError)
                         setCertificates([])
                         calculateStats([])
                         return
                     }
 
                     if (!basicData || basicData.length === 0) {
-                        console.log("⚠️ Nenhum certificado encontrado na tabela")
+                        console.log("Nenhum certificado encontrado na tabela")
                         setCertificates([])
                         calculateStats([])
                         return
@@ -140,25 +141,26 @@ const Certificados: React.FC = () => {
                         .order("data_emissao", { ascending: false })
 
                     if (error) {
-                        console.error("❌ Erro ao buscar certificados com joins:", error)
+                        console.error("Erro ao buscar certificados com joins:", error)
                         // Usar dados básicos se os joins falharem
-                        const formattedCertificates = basicData.map((cert) => ({
+                        const formattedCertificates: CertificateIndexEntry[] = (data ?? []).map((cert) => ({
                             id: cert.id,
                             tokensResumo: {
-                                NOME_COMPLETO: cert.usuario_nome || "Usuário",
-                                CURSO: cert.categoria_nome || cert.categoria || "Curso",
+                                NOME_COMPLETO: cert.usuario?.nome ?? cert.usuario_nome ?? "Usuário",
+                                CURSO: cert.curso?.nome ?? cert.curso_nome ?? cert.categoria_nome ?? "Curso",
                             },
-                            templateKey: cert.categoria || "Geral",
-                            createdAt: cert.data_emissao || cert.data_criacao,
-                            status: cert.status || "ativo",
+                            templateKey: cert.categoria ?? "Geral",
+                            createdAt: cert.data_emissao ?? cert.data_criacao ?? new Date().toISOString(),
+                            status: cert.status ?? "ativo",
+                            pathRelativo: `/certificados/${cert.id}`,
                         }))
 
-                        console.log("✅ Usando dados básicos formatados:", formattedCertificates)
+                        console.log("Usando dados básicos formatados:", formattedCertificates)
                         setCertificates(formattedCertificates)
                         calculateStats(formattedCertificates)
                     } else {
-                        console.log("✅ Certificados encontrados (admin):", data?.length || 0)
-                        console.log("✅ Dados brutos:", data)
+                        console.log("Certificados encontrados (admin):", data?.length || 0)
+                        console.log("Dados brutos:", data)
 
                         const formattedCertificates =
                             data?.map((cert) => ({
@@ -363,7 +365,7 @@ const Certificados: React.FC = () => {
             })
 
             // Abrir página de verificação em nova aba
-            window.open(`/verify/${certificate.id}`, "_blank")
+            window.open(`/certificado/${certificate.id}`, "_blank")
         } catch (error) {
             console.error("❌ Erro ao visualizar certificado:", error)
             toast({
@@ -505,41 +507,91 @@ const Certificados: React.FC = () => {
         )
     }
 
+    const ultimaEmissao =
+        certificates.length > 0
+            ? new Date(
+                Math.max(...certificates.map(c => new Date(c.createdAt).getTime()))
+            ).toLocaleDateString("pt-BR")
+            : "0";
+
     return (
         <ERALayout>
             <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-green-50">
-                {/* Hero Section com gradiente */}
+                {/* Hero Section com gradiente - CERTIFICADOS */}
                 <div
                     className="page-hero w-full rounded-xl lg:rounded-2xl flex flex-col md:flex-row justify-between items-center p-4 lg:p-8 mb-6 lg:mb-8 shadow-md"
-                    style={{ background: "linear-gradient(90deg, #000000 0%, #4A4A4A 40%, #34C759 100%)" }}
+                    style={{ background: "linear-gradient(90deg, #2b363d 0%, #4A4A4A 40%, #cfff00 100%)" }}
                 >
                     <div className="px-4 lg:px-6 py-6 lg:py-8 md:py-12 w-full">
                         <div className="max-w-7xl mx-auto">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 lg:gap-6">
                                 <div className="flex-1">
+                                    
+                                    {/* 1. Label (Delay 20ms) */}
                                     <div className="flex items-center gap-2 mb-2">
                                         <div className="w-2 h-2 bg-era-green rounded-full animate-pulse"></div>
-                                        <span className="text-xs lg:text-sm font-medium text-white/90">Sistema de Certificação</span>
+                                        <BlurText 
+                                            text="Sistema de Certificação"
+                                            className="text-xs lg:text-sm font-medium text-white/90 m-0 p-0"
+                                            delay={20}
+                                            animateBy="words"
+                                        />
                                     </div>
-                                    <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 lg:mb-3 text-white">
-                                        Certificados
-                                    </h1>
-                                    <p className="text-sm sm:text-base lg:text-lg md:text-xl text-white/90 max-w-2xl">
-                                        Visualize e gerencie todos os certificados emitidos pela plataforma
-                                    </p>
+
+                                    {/* 2. Título Principal (Delay 50ms) */}
+                                    <div className="mb-2 lg:mb-3">
+                                        <BlurText 
+                                            text="Certificados"
+                                            className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white m-0 p-0"
+                                            delay={50}
+                                            animateBy="letters"
+                                            direction="top"
+                                        />
+                                    </div>
+
+                                    {/* 3. Descrição (Delay 30ms) */}
+                                    <div className="mb-3 lg:mb-4 max-w-2xl">
+                                        <BlurText 
+                                            text="Visualize e gerencie todos os certificados emitidos pela plataforma"
+                                            className="text-sm sm:text-base lg:text-lg md:text-xl text-white/90 m-0 p-0"
+                                            delay={30}
+                                            animateBy="words"
+                                        />
+                                    </div>
+
+                                    {/* 4. Estatísticas (Delay 20ms) */}
                                     <div className="flex flex-wrap items-center gap-2 lg:gap-4 mt-3 lg:mt-4">
+                                        
                                         <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm text-white/90">
                                             <Award className="h-3 w-3 lg:h-4 lg:w-4 text-era-green" />
-                                            <span>{stats.total} certificados emitidos</span>
+                                            <BlurText 
+                                                text={`${stats.total} certificados emitidos`} 
+                                                className="text-white m-0 p-0" 
+                                                delay={20} 
+                                                animateBy="words" 
+                                            />
                                         </div>
+
                                         <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm text-white/90">
                                             <CheckCircle className="h-3 w-3 lg:h-4 lg:w-4 text-era-green" />
-                                            <span>{stats.ativos} certificados ativos</span>
+                                            <BlurText 
+                                                text={`${stats.ativos} certificados ativos`} 
+                                                className="text-white m-0 p-0" 
+                                                delay={20} 
+                                                animateBy="words" 
+                                            />
                                         </div>
+
                                         <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm text-white/90">
                                             <Target className="h-3 w-3 lg:h-4 lg:w-4 text-era-green" />
-                                            <span>{stats.mediaNota}% média geral</span>
+                                            <BlurText 
+                                                text={`${stats.mediaNota}% média geral`} 
+                                                className="text-white m-0 p-0" 
+                                                delay={20} 
+                                                animateBy="words" 
+                                            />
                                         </div>
+
                                     </div>
                                 </div>
                             </div>
@@ -586,6 +638,7 @@ const Certificados: React.FC = () => {
                                             <SelectItem value="callcenter_fundamentos">CALLCENTER</SelectItem>
                                             <SelectItem value="omnichannel">OMNICHANNEL</SelectItem>
                                             <SelectItem value="omni_avancado">OMNI Avançado</SelectItem>
+                                            <SelectItem value="Comercial">Comercial</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <div className="flex gap-2">
@@ -742,9 +795,7 @@ const Certificados: React.FC = () => {
                                         <Clock className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
                                     </div>
                                     <div className="text-2xl lg:text-3xl font-bold text-white mb-1 lg:mb-2">
-                                        {certificates && certificates.length > 0
-                                            ? new Date(certificates[0].data_emissao).toLocaleDateString("pt-BR")
-                                            : "0"}
+                                        {ultimaEmissao}
                                     </div>
                                     <p className="text-white/90 font-medium text-sm lg:text-base">Última Emissão</p>
                                 </CardContent>

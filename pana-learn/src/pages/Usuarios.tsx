@@ -1,3 +1,4 @@
+import { BlurText } from '@/ui/BlurText';
 import { ERALayout } from '@/components/ERALayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -323,7 +324,6 @@ const Usuarios = () => {
     }
 
     try {
-      // Usar o hook signUp do useAuth para criar usuário com senha
       const { error } = await signUp(
         newUser.email,
         newUser.senha,
@@ -396,11 +396,12 @@ const Usuarios = () => {
     setChangingPassword(true);
 
     try {
-      // Usar a API admin do Supabase para alterar a senha
-      const { error } = await supabase.auth.admin.updateUserById(
-        editingUser.id,
-        { password: newPassword }
-      );
+      // FIX CRÍTICO: Usar a função RPC segura para alterar a senha
+      // Nota: Passamos editingUser.user_id (ID da Auth) e não editingUser.id (ID da tabela)
+      const { error } = await supabase.rpc('admin_update_user_password', {
+        target_user_id: editingUser.user_id, // Usando o ID correto para a tabela auth.users
+        new_password: newPassword
+      });
 
       if (error) throw error;
 
@@ -479,35 +480,66 @@ const Usuarios = () => {
   return (
     <ERALayout>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-green-50">
-        {/* Hero Section com gradiente */}
-        <div className="page-hero w-full rounded-xl lg:rounded-2xl flex flex-col md:flex-row justify-between items-center p-4 lg:p-8 mb-6 lg:mb-8 shadow-md" style={{background: 'linear-gradient(90deg, #000000 0%, #4A4A4A 40%, #34C759 100%)'}}>
+        {/* Hero Section com gradiente - USUÁRIOS */}
+        <div 
+            className="page-hero w-full rounded-xl lg:rounded-2xl flex flex-col md:flex-row justify-between items-center p-4 lg:p-8 mb-6 lg:mb-8 shadow-md" 
+            style={{background: 'linear-gradient(135deg, #2b363d 30%, #4A4A4A 60%, #cfff00 100%)'}}
+        >
           <div className="px-4 lg:px-6 py-6 lg:py-8 md:py-12 w-full">
             <div className="max-w-7xl mx-auto">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 lg:gap-6">
                 <div className="flex-1">
+                  
+                  {/* 1. Label (Delay 20ms) */}
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-2 h-2 bg-era-green rounded-full animate-pulse"></div>
-                    <span className="text-xs lg:text-sm font-medium text-white/90">Plataforma de Ensino</span>
+                    <BlurText 
+                        text="Plataforma de Ensino"
+                        className="text-xs lg:text-sm font-medium text-white/90 m-0 p-0"
+                        delay={20}
+                        animateBy="words"
+                    />
                   </div>
-                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 lg:mb-3 text-white">
-                    Usuários
-                  </h1>
-                  <p className="text-sm sm:text-base lg:text-lg md:text-xl text-white/90 max-w-2xl">
-                    Gerencie usuários e permissões da plataforma
-                  </p>
+
+                  {/* 2. Título (Delay 50ms) */}
+                  <div className="mb-2 lg:mb-3">
+                    <BlurText 
+                        text="Usuários"
+                        className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white m-0 p-0"
+                        delay={50}
+                        animateBy="letters"
+                        direction="top"
+                    />
+                  </div>
+
+                  {/* 3. Descrição (Delay 30ms) */}
+                  <div className="mb-3 lg:mb-4 max-w-2xl">
+                    <BlurText 
+                        text="Gerencie usuários e permissões da plataforma"
+                        className="text-sm sm:text-base lg:text-lg md:text-xl text-white/90 m-0 p-0"
+                        delay={30}
+                        animateBy="words"
+                    />
+                  </div>
+
+                  {/* 4. Tags/Badges (Delay 20ms) */}
                   <div className="flex flex-wrap items-center gap-2 lg:gap-4 mt-3 lg:mt-4">
+                    
                     <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm text-white/90">
                       <Users className="h-3 w-3 lg:h-4 lg:w-4 text-era-green" />
-                      <span>Gestão completa</span>
+                      <BlurText text="Gestão completa" className="text-white m-0 p-0" delay={20} animateBy="words" />
                     </div>
+
                     <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm text-white/90">
                       <Shield className="h-3 w-3 lg:h-4 lg:w-4 text-era-green" />
-                      <span>Controle de acesso</span>
+                      <BlurText text="Controle de acesso" className="text-white m-0 p-0" delay={20} animateBy="words" />
                     </div>
+
                     <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm text-white/90">
                       <UserCheck className="h-3 w-3 lg:h-4 lg:w-4 text-era-green" />
-                      <span>Status dos usuários</span>
+                      <BlurText text="Status dos usuários" className="text-white m-0 p-0" delay={20} animateBy="words" />
                     </div>
+
                   </div>
                 </div>
               </div>

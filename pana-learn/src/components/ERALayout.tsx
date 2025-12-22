@@ -52,7 +52,11 @@ export function ERALayout({ children, breadcrumbs = [], cursoNome = "", userNome
                             </div>
 
                             <div className="flex-shrink-0">
-                                <h1 className="text-2xl font-bold text-white">ERA Learn</h1>
+                                    <img
+                                    src="/logotipoeralearn.png"
+                                    alt="ERA Learn Logo"
+                                    className="h-12 max-w-[200px] object-contain"
+                                />
                             </div>
 
                             <div className="flex items-center space-x-4 min-w-0 flex-1 justify-end">
@@ -103,21 +107,21 @@ export function ERALayout({ children, breadcrumbs = [], cursoNome = "", userNome
                             <Mail className="h-5 w-5 text-[#CCFF00]" />
                             <div>
                                 <p className="font-semibold text-white">Email</p>
-                                <p className="text-sm text-white/60">contato@eralearn.com</p>
+                                <p className="text-sm text-white/60">contato@era.com.br</p>
                             </div>
                         </div>
                         <div className="flex items-center space-x-3">
                             <Phone className="h-5 w-5 text-[#CCFF00]" />
                             <div>
                                 <p className="font-semibold text-white">Telefone</p>
-                                <p className="text-sm text-white/60">(11) 9999-9999</p>
+                                <p className="text-sm text-white/60">(19) 3199-0500</p>
                             </div>
                         </div>
                         <div className="flex items-center space-x-3">
                             <MapPin className="h-5 w-5 text-[#CCFF00]" />
                             <div>
                                 <p className="font-semibold text-white">Endereço</p>
-                                <p className="text-sm text-white/60">São Paulo, SP</p>
+                                <p className="text-sm text-white/60">Campinas, SP</p>
                             </div>
                         </div>
                     </div>

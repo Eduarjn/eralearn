@@ -1,5 +1,5 @@
 "use client"
-
+import { BlurText } from '@/ui/BlurText';
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/useAuth"
@@ -138,7 +138,7 @@ const Quizzes: React.FC = () => {
                 quizzesData = data
                 quizzesError = error
             } else {
-                // Para clientes: buscar apenas os 5 cursos específicos
+                // Para clientes: buscar apenas os 6 cursos específicos
                 console.log("🔍 Buscando quizzes dos cursos específicos (cliente)...")
 
                 const cursosPermitidos = [
@@ -147,6 +147,8 @@ const Quizzes: React.FC = () => {
                     "Omnichannel para Empresas",
                     "Configurações Avançadas OMNI",
                     "Configurações Avançadas PABX",
+                    "Técnicas de Vendas Essenciais",
+                    "Discador",
                 ]
 
                 console.log("📋 Cursos permitidos:", cursosPermitidos)
@@ -442,40 +444,70 @@ const Quizzes: React.FC = () => {
     return (
         <ERALayout>
             <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-green-50">
-                {/* Hero Section com gradiente */}
+                {/* Hero Section com gradiente - QUIZZES */}
                 <div
                     className="page-hero w-full rounded-xl lg:rounded-2xl flex flex-col md:flex-row justify-between items-center p-4 lg:p-8 mb-6 lg:mb-8 shadow-md"
-                    style={{ background: "linear-gradient(90deg, #000000 0%, #4A4A4A 40%, #34C759 100%)" }}
+                    style={{ background: "linear-gradient(135deg, #2b363d 30%, #4A4A4A 60%, #cfff00 100%)" }}
                 >
                     <div className="px-4 lg:px-6 py-6 lg:py-8 md:py-12 w-full">
                         <div className="max-w-7xl mx-auto">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 lg:gap-6">
                                 <div className="flex-1">
+                                    
+                                    {/* 1. Label (Delay 20ms) */}
                                     <div className="flex items-center gap-2 mb-2">
                                         <div className="w-2 h-2 bg-era-green rounded-full animate-pulse"></div>
-                                        <span className="text-xs lg:text-sm font-medium text-white/90">Plataforma de Ensino</span>
+                                        <BlurText 
+                                            text="Plataforma de Ensino"
+                                            className="text-xs lg:text-sm font-medium text-white/90 m-0 p-0"
+                                            delay={20}
+                                            animateBy="words"
+                                        />
                                     </div>
-                                    <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 lg:mb-3 text-white">
-                                        Quizzes
-                                    </h1>
-                                    <p className="text-sm sm:text-base lg:text-lg md:text-xl text-white/90 max-w-2xl">
-                                        Visualize e gerencie todos os quizzes de conclusão de cursos
-                                    </p>
+
+                                    {/* 2. Título Principal (Delay 50ms) */}
+                                    <div className="mb-2 lg:mb-3">
+                                        <BlurText 
+                                            text="Quizzes"
+                                            className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white m-0 p-0"
+                                            delay={50}
+                                            animateBy="letters"
+                                            direction="top"
+                                        />
+                                    </div>
+
+                                    {/* 3. Descrição (Delay 30ms) */}
+                                    <div className="mb-3 lg:mb-4 max-w-2xl">
+                                        <BlurText 
+                                            text="Visualize e gerencie todos os quizzes de conclusão de cursos"
+                                            className="text-sm sm:text-base lg:text-lg md:text-xl text-white/90 m-0 p-0"
+                                            delay={30}
+                                            animateBy="words"
+                                        />
+                                    </div>
+
+                                    {/* 4. Estatísticas (Delay 20ms) */}
                                     <div className="flex flex-wrap items-center gap-2 lg:gap-4 mt-3 lg:mt-4">
+                                        
                                         <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm text-white/90">
                                             <HelpCircle className="h-3 w-3 lg:h-4 lg:w-4 text-era-green" />
-                                            <span>Avaliações interativas</span>
+                                            <BlurText text="Avaliações interativas" className="text-white m-0 p-0" delay={20} animateBy="words" />
                                         </div>
+
                                         <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm text-white/90">
                                             <Target className="h-3 w-3 lg:h-4 lg:w-4 text-era-green" />
-                                            <span>Certificação automática</span>
+                                            <BlurText text="Certificação automática" className="text-white m-0 p-0" delay={20} animateBy="words" />
                                         </div>
+
                                         <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm text-white/90">
                                             <Users className="h-3 w-3 lg:h-4 lg:w-4 text-era-green" />
-                                            <span>Progresso dos alunos</span>
+                                            <BlurText text="Progresso dos alunos" className="text-white m-0 p-0" delay={20} animateBy="words" />
                                         </div>
+
                                     </div>
                                 </div>
+                                
+                                {/* Botão Voltar (Mantido do original) */}
                                 <Button
                                     onClick={() => navigate("/dashboard")}
                                     className="bg-gradient-to-r from-era-black via-era-gray-medium to-era-green hover:from-era-black/90 hover:via-era-gray-medium/90 hover:to-era-green/90 text-white font-medium px-4 lg:px-6 py-2 lg:py-3 rounded-lg lg:rounded-xl text-sm lg:text-base transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
