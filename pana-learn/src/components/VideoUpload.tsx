@@ -19,7 +19,8 @@ interface VideoUploadProps {
 
 type VideoSource = 'upload' | 'youtube';
 
-export function VideoUpload({ onClose, onSuccess, preSelectedCourseId }: VideoUploadProps) {
+//function VideoUpload({ onClose, onSuccess, preSelectedCourseId }: VideoUploadProps) {
+function VideoUpload({ onClose, onSuccess, preSelectedCourseId }: VideoUploadProps) {    
   console.log('🎯 VideoUpload - Componente montado');
   console.log('🎯 VideoUpload - Props:', { onClose, onSuccess, preSelectedCourseId });
   
@@ -529,6 +530,19 @@ export function VideoUpload({ onClose, onSuccess, preSelectedCourseId }: VideoUp
       }
     }
   };
+  //teste0911
+  const sanitizeFilename = (filename: string) => {
+  const [name, ...rest] = filename.split('.');
+  const extension = rest.length ? `.${rest.pop()}` : '';
+  const base = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w.-]+/g, '-')
+    .replace(/-+/g, '-')
+    .toLowerCase()
+    .replace(/(^-|-?$)/g, '');
+  return `${base || 'arquivo'}${extension.toLowerCase()}`;  
+  };
 
   const uploadFile = async (file: File, bucket: string, path: string) => {
     const { data, error } = await supabase.storage
@@ -625,8 +639,10 @@ export function VideoUpload({ onClose, onSuccess, preSelectedCourseId }: VideoUp
 
       if (activeTab === 'upload') {
         // Upload do vídeo
-        const videoPath = `videos/${Date.now()}_${videoFile!.name}`;
-        videoUrl = await uploadFile(videoFile!, 'training-videos', videoPath);
+        const safeVideoName = sanitizeFilename(videoFile!.name);
+        const videoPath = `videos/${Date.now()}_${safeVideoName}`;
+        const encodedVideoPath = videoPath.split('/').map(encodeURIComponent).join('/');
+        videoUrl = await uploadFile(videoFile!, 'training-videos', encodedVideoPath);
         storagePath = videoPath;
       } else {
         // YouTube URL
@@ -1030,3 +1046,5 @@ export function VideoUpload({ onClose, onSuccess, preSelectedCourseId }: VideoUp
     </Card>
   );
 }
+
+export default VideoUpload;

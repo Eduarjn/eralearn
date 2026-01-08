@@ -24,7 +24,7 @@ export function Sidebar({ children }: SidebarProps) {
   return (
     <div className="flex h-screen bg-futuristic overflow-hidden">
       {/* Desktop Sidebar - Hidden on mobile */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:block lg:fixed lg:inset-y-0 lg:left-0 lg:z-30">
         <ERASidebar />
       </div>
 
@@ -58,20 +58,20 @@ export function Sidebar({ children }: SidebarProps) {
 
       {/* Main Content with mobile padding */}
       <main 
-        className="flex-1 transition-[margin-left] duration-200 ease-in-out overflow-hidden"
+        className="flex-1 transition-[margin-left] duration-200 ease-in-out overflow-hidden lg:ml-0"
         style={{ 
-          // Reduz o espaçamento entre a sidebar e o conteúdo para ~5% do tamanho atual
-          marginLeft: `${Math.max(4, Math.floor(sidebarWidth * 0.05))}px`,
+          // Ajusta o espaçamento para a sidebar fixa
+          marginLeft: '0px',
           paddingTop: '0px'
         }}
       >
         {/* Mobile content padding */}
-        <div className="lg:hidden pt-16 h-full overflow-y-auto mobile-scroll-fix">
+        <div className="lg:hidden pt-16 h-full overflow-y-auto mobile-scroll-fix bg-futuristic">
           {children}
         </div>
         
         {/* Desktop content */}
-        <div className="hidden lg:block h-full overflow-y-auto">
+        <div className="hidden lg:block h-full overflow-y-auto bg-futuristic">
           {children}
         </div>
       </main>

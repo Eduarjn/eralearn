@@ -1,0 +1,5 @@
+[33m3b37965[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m)[m Fix: Corrigir vercel.json e loop infinito de imagens
+[33mfdb91de[m[33m ([m[1;31morigin/master[m[33m)[m Fix: URLs absolutas diretas para imagens no Vercel
+[33mf37da2b[m Fix: Fallbacks robustos para logo em todos os componentes
+[33m87ba604[m Fix: Sistema completo de resolução de imagens para Vercel
+[33mdbd289e[m Fix: URLs absolutas para todas as imagens no Vercel

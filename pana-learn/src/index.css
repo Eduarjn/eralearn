@@ -1,24 +1,27 @@
+/* Importar tokens futuristas */
+@import './lib/ui/tokens.css';
+
+/* Importar tokens do tema ERA */
+@import './styles/tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Importar tokens futuristas */
-@import './lib/ui/tokens.css';
-
 /* Classes personalizadas para efeitos de sombra */
 @layer utilities {
   .shadow-3xl {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
                 0 0 0 1px rgba(255, 255, 255, 0.1),
                 0 0 20px rgba(255, 255, 255, 0.2);
   }
-  
+
   .hover\:shadow-3xl:hover {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
                 0 0 0 1px rgba(255, 255, 255, 0.1),
                 0 0 20px rgba(255, 255, 255, 0.2);
   }
-  
+
   .hover\:bg-gray-750:hover {
     background-color: #374151;
   }
@@ -183,31 +186,31 @@
     border-bottom-left-radius: 12px !important;
     border-bottom-right-radius: 12px !important;
   }
-  
+
   /* Scrollbar personalizada para melhor UX */
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: #4B5563 #1F2937;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-track {
     background: #1F2937;
     border-radius: 3px;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background: #4B5563;
     border-radius: 3px;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: #6B7280;
   }
-  
+
   /* Garantir que o scroll funcione em todos os navegadores */
 .overflow-y-auto {
   overflow-y: auto !important;
@@ -229,7 +232,7 @@
 
 @media (min-width: 1024px) {
   .sidebar-content {
-    margin-left: 256px; /* 64 * 4 = 256px (w-64) */
+    margin-left: 0; /* Removido para eliminar a faixa preta */
   }
 }
 
@@ -245,20 +248,20 @@
   width: 100%;
   min-height: 100vh;
 }
-  
+
   /* Prevenir problemas de scroll em mobile */
   .mobile-scroll-fix {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
-  
+
   /* Fix para problemas de scroll em diferentes navegadores */
   .scroll-container {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
   }
-  
+
   /* Garantir que elementos com overflow funcionem corretamente */
   .overflow-y-auto {
     overflow-y: auto !important;
@@ -293,7 +296,7 @@
   .era-gradient {
     background: linear-gradient(135deg, hsl(var(--era-black)) 0%, hsl(0 0% 20%) 100%);
   }
-  
+
   .era-green-button {
     background: hsl(var(--era-green));
     color: hsl(var(--era-black));
@@ -301,7 +304,7 @@
     border: 1px solid hsl(142 76% 45%);
     transition: all 0.2s ease;
   }
-  
+
   .era-green-button:hover {
     background: hsl(142 76% 45%);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
@@ -413,21 +416,21 @@
       background-attachment: scroll;
       background-size: cover;
     }
-    
+
     .glassmorphism-card {
       margin: 1rem;
       padding: 1.5rem;
     }
-    
+
     /* Mobile-friendly spacing */
     .mobile-padding {
       padding: 1rem;
     }
-    
+
     .mobile-text {
       font-size: 0.875rem;
     }
-    
+
     /* Better mobile navigation */
     .mobile-nav {
       padding: 0.75rem;
@@ -438,11 +441,11 @@
     .hero-background {
       padding: 0.5rem;
     }
-    
+
     .card-content {
       padding: 1rem;
     }
-    
+
     /* Stack elements on small screens */
     .responsive-stack {
       flex-direction: column;

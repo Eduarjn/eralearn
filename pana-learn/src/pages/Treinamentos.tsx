@@ -1,6 +1,7 @@
+import { BlurText } from '@/ui/BlurText';
 import { ERALayout } from '@/components/ERALayout';
 import { CourseCard } from '@/components/CourseCard';
-import { VideoUpload } from '@/components/VideoUpload';
+import  VideoUpload  from '@/components/VideoUpload';
 import { YouTubeEmbed } from '@/components/YouTubeEmbed';
 import { useCourses } from '@/hooks/useCourses';
 import type { Course } from '@/hooks/useCourses';
@@ -13,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Filter, Plus, Video, Eye, Download, Youtube, Trash, BookOpen, Clock, Users, TrendingUp, Star, Award, Zap, ArrowLeft, Settings, ListOrdered } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { Dialog } from '@/components/ui/dialog';
 import type { Database } from '@/integrations/supabase/types';
@@ -199,6 +200,32 @@ const Treinamentos = () => {
       modules: '10 módulos',
       level: 'Avançado'
     },
+    {
+      nome: 'Técnicas de Vendas Essenciais',
+      descricao: 'Curso completo sobre abordagens comerciais e fechamento de vendas',
+      categoria: 'Comercial',
+      status: 'ativo',
+      imagem_url: null,
+      categorias: { nome: 'Comercial', cor: '#F59E0B' },
+      gradient: 'from-amber-500 to-orange-600',
+      icon: '💼',
+      duration: '4 horas',
+      modules: '3 módulos',
+      level: 'Intermediário'
+    },
+    {
+      nome: 'Discador', // IMPORTANTE: Tem que ser idêntico ao nome no Banco de Dados
+      descricao: 'Treinamento completo sobre o uso e configuração do Discador',
+      categoria: 'CALLCENTER',
+      status: 'ativo',
+      imagem_url: null,
+      categorias: { nome: 'CALLCENTER', cor: '#6366F1' },
+      gradient: 'from-indigo-500 to-purple-600',
+      icon: '📞', // Sugestão: mudei o ícone para telefone (opcional)
+      duration: '6 horas',
+      modules: '8 módulos',
+      level: 'Avançado'
+    },
   ];
 
   // IDs ou nomes dos cinco cursos principais
@@ -207,18 +234,31 @@ const Treinamentos = () => {
   // Buscar cursos do banco que são principais
   const cursosPrincipaisBanco = courses.filter(course => cursosPrincipaisNomes.includes(course.nome));
 
-  // Gerar lista final: usar curso real se existir, senão mock
+  // Gerar lista final: usar curso real se existir, senão mock TESTE EDUAR 
   const filteredCourses = cursosPrincipaisNomes.map(nome => {
     const real = courses.find(c => c.nome === nome);
     if (real) return real;
+
     // Adiciona id mock para o CourseCard saber que é mock
     const mock = cursosPrincipaisMock.find(m => m.nome === nome);
+    // Garante que o objeto mock existe antes de usar
+    if (!mock) return { id: 'erro', nome: nome, categoria: 'Geral', status: 'inativo' };
+
     return { ...mock, id: `mock-${mock.nome.replace(/\s+/g, '-').toLowerCase()}` };
   }).filter(course => {
+    // --- REGRA DE SEGURANÇA ---
+    // Se a categoria for 'Comercial' e o usuário NÃO for admin, esconde o curso
+    if (course.categoria === 'Comercial' && !isAdmin) {
+      return false;
+    }
+    // --------------------------
+
     const matchesSearch = course.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       course.descricao?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       course.categoria.toLowerCase().includes(searchTerm.toLowerCase());
+      
     const matchesCategory = selectedCategory === 'all' || course.categoria === selectedCategory;
+    
     return matchesSearch && matchesCategory;
   });
 
@@ -1480,36 +1520,86 @@ const Treinamentos = () => {
         )}
 
         {/* Hero Section com gradiente */}
-        <div className="page-hero w-full rounded-xl lg:rounded-2xl flex flex-col md:flex-row justify-between items-center p-4 lg:p-8 mb-6 lg:mb-8 shadow-md" style={{background: 'linear-gradient(90deg, #000000 0%, #4A4A4A 40%, #34C759 100%)'}}>
+        <div className="page-hero w-full rounded-xl lg:rounded-2xl flex flex-col md:flex-row justify-between items-center p-4 lg:p-8 mb-6 lg:mb-8 shadow-md" style={{background: "linear-gradient(135deg, #2b363d 30%, #4A4A4A 60%, #cfff00 100%)"}}>
           <div className="px-4 lg:px-6 py-6 lg:py-8 md:py-12 w-full">
             <div className="max-w-7xl mx-auto">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 lg:gap-6">
                 <div className="flex-1">
+                  
+                  {/* 1. Label "Plataforma de Ensino" (Delay 0ms) */}
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-2 h-2 bg-era-green rounded-full animate-pulse"></div>
-                    <span className="text-xs lg:text-sm font-medium text-white/90">Plataforma de Ensino</span>
+                    <BlurText 
+                      text="Plataforma de Ensino" 
+                      className="text-xs lg:text-sm font-medium text-white/90 m-0 p-0"
+                      delay={20}
+                      animateBy="words"
+                      direction="top"
+                    />
                   </div>
-                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 lg:mb-3 text-white">
-                    Treinamentos
-                  </h1>
-                  <p className="text-sm sm:text-base lg:text-lg md:text-xl text-white/90 max-w-2xl">
-                    Explore nossos cursos de PABX e Omnichannel com conteúdo exclusivo e atualizado
-                  </p>
+                  
+                  {/* 2. Título "Treinamentos" (Delay 100ms) */}
+                  <div className="mb-2 lg:mb-3">
+                    <BlurText 
+                      text="Treinamentos" 
+                      className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white m-0 p-0"
+                      delay={50}
+                      animateBy="letters"
+                      direction="top"
+                    />
+                  </div>
+
+                  {/* 3. Descrição (Delay 200ms) */}
+                  <div className="mb-3 lg:mb-4 max-w-2xl">
+                    <BlurText 
+                      text="Explore nossos cursos de PABX e Omnichannel com conteúdo exclusivo e atualizado"
+                      className="text-sm sm:text-base lg:text-lg md:text-xl text-white/90 m-0 p-0"
+                      delay={30} // Delay entre palavras
+                      animateBy="words" // Melhor usar 'words' para frases longas
+                      direction="top"
+                    />
+                  </div>
+
+                  {/* 4. Estatísticas (Delay 400ms - aparecem juntas) */}
                   <div className="flex flex-wrap items-center gap-2 lg:gap-4 mt-3 lg:mt-4">
+                    
+                    {/* Stat 1 */}
                     <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm text-white/90">
                       <BookOpen className="h-3 w-3 lg:h-4 lg:w-4 text-era-green" />
-                      <span>{filteredCourses.length} cursos disponíveis</span>
+                      <BlurText 
+                        text={`${filteredCourses.length} cursos disponíveis`}
+                        className="text-white m-0 p-0"
+                        delay={20}
+                        animateBy="words"
+                      />
                     </div>
+
+                    {/* Stat 2 */}
                     <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm text-white/90">
                       <Clock className="h-3 w-3 lg:h-4 lg:w-4 text-era-green" />
-                      <span>+50 horas de conteúdo</span>
+                      <BlurText 
+                        text="+1 horas de conteúdo"
+                        className="text-white m-0 p-0"
+                        delay={20}
+                        animateBy="words"
+                      />
                     </div>
+
+                    {/* Stat 3 */}
                     <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm text-white/90">
                       <Users className="h-3 w-3 lg:h-4 lg:w-4 text-era-green" />
-                      <span>1000+ alunos</span>
+                      <BlurText 
+                        text="100+ alunos"
+                        className="text-white m-0 p-0"
+                        delay={20}
+                        animateBy="words"
+                      />
                     </div>
+
                   </div>
                 </div>
+
+                {/* Botões de Admin (Mantidos iguais) */}
                 {isAdmin && (
                   <div className="flex gap-2">
                     <Button 
@@ -1522,7 +1612,7 @@ const Treinamentos = () => {
                     <Button 
                       onClick={() => navigate('/admin/gerenciar-ordem-videos')}
                       variant="outline"
-                      className="border-era-green text-era-green hover:bg-era-green hover:text-white font-medium px-6 py-2 rounded-full flex items-center gap-2 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
+                      className="border-era-green text-era-black hover:bg-era-green hover:text-white font-medium px-6 py-2 rounded-full flex items-center gap-2 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
                     >
                       <ListOrdered className="h-4 w-4" />
                       Gerenciar Ordem
@@ -1583,7 +1673,7 @@ const Treinamentos = () => {
                 {/* Lista de vídeos para administrador */}
                 {isAdmin && (
                   <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl overflow-hidden">
-                    <CardHeader className="bg-gradient-to-r from-era-black via-era-gray-medium to-era-green text-white">
+                    <CardHeader className="text-white rounded-xl" style={{background: "linear-gradient(135deg, #2b363d 30%, #4A4A4A 60%, #cfff00 100%)" }}>
                       <div className="flex items-center justify-between">
                         <div>
                           <CardTitle className="flex items-center gap-3 text-white font-bold text-xl">
@@ -1597,7 +1687,7 @@ const Treinamentos = () => {
                               </Badge>
                             </span>
                           </CardTitle>
-                          <CardDescription className="text-white/90 mt-2 font-medium">
+                          <CardDescription className="text-white/100 mt-2 font-medium">
                             Gerencie os vídeos de treinamento da plataforma
                           </CardDescription>
                         </div>
@@ -1647,7 +1737,7 @@ const Treinamentos = () => {
                                   {video.cursos && (
                                     <>
                                       <span>•</span>
-                                      <span className="text-era-green font-medium">{video.cursos.nome}</span>
+                                      <span className="text-era-black font-medium">{video.cursos.nome}</span>
                                     </>
                                   )}
                                 </div>
@@ -1713,7 +1803,7 @@ const Treinamentos = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                     {getCoursesByCategory().map((categoryGroup) => (
                       <Card key={categoryGroup.categoria} className="hover:shadow-xl transition-all duration-300 h-full border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                        <CardHeader className="pb-3 bg-gradient-to-r from-era-black via-era-gray-medium to-era-green text-white rounded-t-lg">
+                        <CardHeader className="text-white rounded-xl" style={{background: "linear-gradient(135deg, #2b363d 30%, #4A4A4A 60%, #cfff00 100%)"}}>
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
                               <CardTitle className="text-base lg:text-lg font-bold text-white mb-2 truncate">
@@ -1768,7 +1858,7 @@ const Treinamentos = () => {
                               {categoryGroup.cursos.slice(0, 3).map((course) => (
                                 <div key={course.id} className="flex items-center justify-between text-xs lg:text-sm">
                                   <span className="text-era-gray-medium truncate flex-1 mr-2">{course.nome}</span>
-                                  <Badge className="text-xs flex-shrink-0 bg-era-green text-white" variant="outline">
+                                  <Badge className="text-xs flex-shrink-0 bg-era-green text-black" variant="outline">
                                     {getVisualProp(course, 'level', 'Iniciante')}
                                   </Badge>
                                 </div>
