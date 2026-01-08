@@ -1858,7 +1858,7 @@ const Treinamentos = () => {
                               {categoryGroup.cursos.slice(0, 3).map((course) => (
                                 <div key={course.id} className="flex items-center justify-between text-xs lg:text-sm">
                                   <span className="text-era-gray-medium truncate flex-1 mr-2">{course.nome}</span>
-                                  <Badge className="text-xs flex-shrink-0 bg-era-green text-white" variant="outline">
+                                  <Badge className="text-xs flex-shrink-0 bg-era-green text-black" variant="outline">
                                     {getVisualProp(course, 'level', 'Iniciante')}
                                   </Badge>
                                 </div>

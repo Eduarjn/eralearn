@@ -58,8 +58,6 @@ const Certificado: React.FC = () => {
   const loadCertificate = async () => {
     try {
       setLoading(true);
-      
-      // Buscar certificado com dados do usuário e curso
       const { data, error } = await supabase
         .from('certificados')
         .select(`
@@ -94,18 +92,62 @@ const Certificado: React.FC = () => {
     }
   };
 
-  const handleDownload = () => {
-    if (certificate?.certificado_url) {
+  const handleDownload = async () => {
+    // 1. Validação inicial com logs para debug
+    console.log("Botão de download clicado. Dados:", certificate);
+
+    if (!certificate?.certificado_url) {
+      console.warn("URL vazia.");
+      toast({
+        title: "Certificado indisponível",
+        description: "O arquivo ainda não foi gerado pelo sistema.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      toast({
+        title: "Iniciando download...",
+        description: "Aguarde enquanto preparamos o arquivo.",
+      });
+
+      // 2. Busca o arquivo via código (Fetch)
+      // Isso "engana" o navegador para baixar o arquivo ao invés de só abrir
+      const response = await fetch(certificate.certificado_url);
+      
+      if (!response.ok) throw new Error('Falha na requisição do arquivo');
+      
+      const blob = await response.blob(); // Transforma em objeto binário
+      const url = window.URL.createObjectURL(blob); // Cria URL temporária na memória
+
+      // 3. Cria o link de download forçado
       const link = document.createElement('a');
-      link.href = certificate.certificado_url;
-      link.download = `certificado-${certificate.categoria_nome}.pdf`;
+      link.href = url;
+      
+      // Define um nome de arquivo limpo e profissional
+      const nomeLimpo = certificate.categoria_nome.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      link.download = `certificado_era_learn_${nomeLimpo}.pdf`;
+      
       document.body.appendChild(link);
       link.click();
+      
+      // 4. Limpeza
       document.body.removeChild(link);
-    } else {
+      window.URL.revokeObjectURL(url); // Libera memória
+      console.log("Download concluído com sucesso.");
+
+    } catch (error) {
+      console.error("Erro no download direto:", error);
+      
+      // 5. FALLBACK (Plano B)
+      // Se o método acima falhar (ex: bloqueio de CORS), abre em nova aba
+      console.log("Tentando método alternativo (Nova Aba)...");
+      window.open(certificate.certificado_url, '_blank');
+      
       toast({
-        title: "Certificado em processamento",
-        description: "O PDF está sendo gerado. Tente novamente em alguns instantes.",
+        title: "Download alternativo",
+        description: "Não foi possível baixar direto. Abrimos o PDF em uma nova aba para você salvar.",
         variant: "default"
       });
     }
@@ -124,13 +166,11 @@ const Certificado: React.FC = () => {
           window.open(linkedinUrl, '_blank');
           break;
         }
-        
         case 'facebook': {
           const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`;
           window.open(facebookUrl, '_blank');
           break;
         }
-        
         case 'copy':
           await navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`);
           setCopied(true);
@@ -155,7 +195,7 @@ const Certificado: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
           <p className="text-gray-600">Carregando certificado...</p>
         </div>
       </div>
@@ -168,24 +208,21 @@ const Certificado: React.FC = () => {
         <div className="text-center">
           <Award className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-700 mb-2">Certificado não encontrado</h2>
-          <p className="text-gray-500 mb-4">O certificado solicitado não existe ou foi removido.</p>
-          <Button onClick={() => navigate('/dashboard')}>
-            Voltar ao Dashboard
-          </Button>
+          <Button onClick={() => navigate('/dashboard')}>Voltar ao Dashboard</Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen bg-gray-100 py-8 font-sans">
+      <div className="max-w-5xl mx-auto px-4">
+        {/* Header de Navegação */}
+        <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
           <Button
             onClick={() => navigate('/dashboard')}
             variant="outline"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 hover:bg-gray-200"
           >
             <ArrowLeft className="w-4 h-4" />
             Voltar ao Dashboard
@@ -194,156 +231,153 @@ const Certificado: React.FC = () => {
           <div className="flex gap-2">
             <Button
               onClick={handleDownload}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-black text-white hover:bg-gray-800"
             >
               <Download className="w-4 h-4 mr-2" />
               Baixar PDF
             </Button>
-            
-            <Button
-              onClick={() => handleShare('copy')}
-              variant="outline"
-            >
-              {copied ? (
-                <Check className="w-4 h-4 mr-2" />
-              ) : (
-                <Copy className="w-4 h-4 mr-2" />
-              )}
-              {copied ? 'Copiado!' : 'Copiar Link'}
-            </Button>
           </div>
         </div>
 
-        {/* Certificado */}
-        <Card className="bg-white shadow-xl border-0">
+        {/* CONTAINER DO CERTIFICADO */}
+        <Card className="bg-white shadow-2xl border-0 overflow-hidden relative print:shadow-none print:w-full">
           <CardContent className="p-0">
+            
             {/* Template do Certificado */}
-            <div className="relative bg-gradient-to-br from-blue-50 to-indigo-100 p-12">
-              {/* Borda decorativa */}
-              <div className="absolute inset-4 border-2 border-blue-200 rounded-lg"></div>
+            <div className="relative bg-white p-1 md:p-12 min-h-[600px] flex flex-col justify-between">
               
-              {/* Cabeçalho */}
-              <div className="text-center mb-8 relative z-10">
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  <img 
-                    src={branding.logo_url} 
-                    alt="ERA Learn Logo" 
-                    className="h-16 w-auto object-contain"
-                  />
-                </div>
-                <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-                  Certificado de Conclusão
-                </h2>
-                <p className="text-gray-600">
-                  Este documento certifica que o participante concluiu com êxito o curso
-                </p>
+              {/* 1. Marca D'água (Background Logo) */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                <img 
+                  src={branding.logo_url} 
+                  alt="" 
+                  className="w-[550px] opacity-[0.03] grayscale-0 transform scale-150"
+                />
               </div>
 
-              {/* Conteúdo principal */}
-              <div className="text-center mb-8 relative z-10">
-                <h3 className="text-4xl font-bold text-blue-700 mb-6">
-                  {certificate.categoria_nome}
-                </h3>
+              {/* 2. Borda Decorativa Interna */}
+              <div className="absolute inset-4 md:inset-6 border-[3px] border-double border-gray-300 pointer-events-none rounded-sm"></div>
+              
+              {/* Conteúdo Centralizado */}
+              <div className="relative z-10 flex flex-col items-center text-center space-y-8 py-8">
                 
-                <div className="text-xl text-gray-700 mb-8">
-                  <p className="mb-2">
-                    <span className="font-semibold">Concedido a:</span>
-                  </p>
-                  <p className="text-2xl font-bold text-gray-800 mb-4">
-                    {certificate.usuario?.nome}
-                  </p>
-                  
-                  <div className="flex items-center justify-center gap-8 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      <span>{certificate.usuario?.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      <span>
-                        {new Date(certificate.data_conclusao).toLocaleDateString('pt-BR')}
-                      </span>
-                    </div>
-                  </div>
+                {/* Cabeçalho da Marca */}
+                <div className="mb-6">
+                  <img 
+                    src={branding.logo_url} 
+                    alt="ERA Learn" 
+                    className="h-20 w-auto object-contain mx-auto"
+                  />
                 </div>
 
-                {/* Nota */}
-                <div className="inline-block bg-green-100 text-green-800 px-6 py-3 rounded-full mb-8">
-                  <Badge variant="default" className="bg-green-500 text-white text-lg px-4 py-2">
-                    Nota: {certificate.nota}%
+                {/* Título Oficial */}
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-serif text-gray-900 tracking-wide uppercase mb-2">
+                    Certificado de Conclusão
+                  </h1>
+                  <div className="w-24 h-1 bg-lime-400 mx-auto rounded-full"></div>
+                </div>
+
+                {/* Texto Introdutório */}
+                <p className="text-gray-500 text-lg font-serif italic">
+                  Certificamos para os devidos fins que
+                </p>
+
+                {/* Nome do Aluno */}
+                <h2 className="text-4xl md:text-5xl font-bold text-gray-900 capitalize tracking-tight">
+                  {certificate.usuario?.nome}
+                </h2>
+
+                {/* Detalhes do Curso */}
+                <div className="space-y-2">
+                  <p className="text-gray-500 text-lg">concluiu com êxito o curso de formação profissional em</p>
+                  <h3 className="text-3xl font-bold text-lime-600 uppercase tracking-wider">
+                    {certificate.categoria_nome}
+                  </h3>
+                </div>
+
+                {/* Badges e Infos Extras */}
+                <div className="flex flex-wrap items-center justify-center gap-4 mt-4">
+                  <Badge variant="outline" className="px-4 py-1 text-sm border-gray-300 bg-gray-50 text-gray-700">
+                    Carga Horária: 1h
+                  </Badge>
+                  <Badge className="px-4 py-1 text-sm bg-lime-400 text-black hover:bg-lime-500 border-none font-bold">
+                    Aproveitamento: {certificate.nota}%
                   </Badge>
                 </div>
 
-                {/* Descrição */}
+                {/* Descrição Curta (Opcional) */}
                 {certificate.curso?.descricao && (
-                  <p className="text-gray-600 max-w-2xl mx-auto mb-8">
-                    {certificate.curso.descricao}
+                  <p className="text-gray-500 max-w-2xl text-sm leading-relaxed mt-4">
+                    {certificate.curso.descricao.slice(0, 150)}...
                   </p>
                 )}
 
-                {/* Assinatura */}
-                <div className="flex justify-between items-end max-w-2xl mx-auto">
-                  <div className="text-center">
-                    <div className="w-32 h-0.5 bg-gray-400 mb-2"></div>
-                    <p className="text-sm text-gray-600">Assinatura Digital</p>
-                  </div>
-                  
-                  <div className="text-center">
-                    <div className="w-32 h-0.5 bg-gray-400 mb-2"></div>
-                    <p className="text-sm text-gray-600">Data de Emissão</p>
-                    <p className="text-sm font-medium">
-                      {new Date().toLocaleDateString('pt-BR')}
-                    </p>
-                  </div>
-                </div>
               </div>
 
-              {/* QR Code */}
-              <div className="absolute bottom-8 right-8">
-                <div className="bg-white p-3 rounded-lg shadow-md">
-                  <div className="w-16 h-16 bg-gray-200 flex items-center justify-center rounded">
-                    <QrCode className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1 text-center">QR Code</p>
+              {/* Rodapé do Certificado */}
+              <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-8 mt-12 px-8 items-end">
+                
+                {/* Data e Local */}
+                <div className="text-center md:text-left">
+                  <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Data de Emissão</p>
+                  <p className="text-sm font-medium text-gray-700">
+                    {new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">São Paulo, Brasil</p>
                 </div>
+
+                {/* Assinatura (Centro) */}
+                <div className="text-center">
+                  {/* Espaço para assinatura imagem se houver, ou linha */}
+                  <p className="font-bold text-gray-800">Sabrina Coghe </p>
+                  <div className="w-full h-px bg-gray-300 mb-4"></div>
+                  <p className="font-bold text-gray-800">Gerente de operações</p>
+                  <p className="text-xs text-gray-500">ERA</p>
+                </div>
+
+                {/* Código de Validação */}
+                <div className="text-center md:text-right">
+                  <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Validação</p>
+                  <p className="text-xs font-mono text-gray-500 break-all">
+                    ID: {certificate.id.slice(0, 8)}
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Verifique a autenticidade deste documento no portal.
+                  </p>
+                </div>
+
               </div>
 
-              {/* Número do certificado */}
-              <div className="absolute bottom-8 left-8">
-                <p className="text-xs text-gray-500">
-                  Certificado ID: {certificate.id}
-                </p>
+              {/* QR Code (COMENTADO conforme solicitado)
+              <div className="absolute bottom-8 right-8 print:block">
+                <div className="bg-white p-2 rounded shadow-sm border border-gray-100">
+                   <QrCode className="w-12 h-12 text-gray-800" />
+                </div>
               </div>
+              */}
+
             </div>
           </CardContent>
         </Card>
 
-        {/* Botões de compartilhamento */}
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Share2 className="w-5 h-5" />
-              Compartilhar Certificado
+        {/* Footer de Compartilhamento Externo */}
+        <Card className="mt-8 bg-gray-50 border border-gray-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center justify-center gap-2 text-base text-gray-600">
+              <Share2 className="w-4 h-4" />
+              Orgulhoso da sua conquista? Compartilhe!
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4 justify-center">
+            <div className="flex flex-wrap gap-4 justify-center">
               <Button
                 onClick={() => handleShare('linkedin')}
                 variant="outline"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-all"
               >
                 <Linkedin className="w-4 h-4 text-blue-600" />
-                LinkedIn
-              </Button>
-              
-              <Button
-                onClick={() => handleShare('facebook')}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Facebook className="w-4 h-4 text-blue-600" />
-                Facebook
+                Compartilhar no LinkedIn
               </Button>
               
               <Button
@@ -351,12 +385,8 @@ const Certificado: React.FC = () => {
                 variant="outline"
                 className="flex items-center gap-2"
               >
-                {copied ? (
-                  <Check className="w-4 h-4 text-green-600" />
-                ) : (
-                  <Copy className="w-4 h-4 text-gray-600" />
-                )}
-                {copied ? 'Copiado!' : 'Copiar Link'}
+                {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-600" />}
+                {copied ? 'Link Copiado' : 'Copiar Link'}
               </Button>
             </div>
           </CardContent>
@@ -366,4 +396,4 @@ const Certificado: React.FC = () => {
   );
 };
 
-export default Certificado; 
+export default Certificado;

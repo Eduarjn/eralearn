@@ -43,6 +43,10 @@ export function CertificatePDFGenerator({
     const shortId = generateShortId(certificate.numero_certificado);
     const formattedDate = formatDate(certificate.data_emissao);
     
+    // Cores extraídas do Logotipo (Brand Colors)
+    // Primary: #333 (Cinza Escuro/Preto Suave)
+    // Accent:  #00aa00 (Verde ajustado para impressão - o #00ff00 puro pode ficar ilegível no branco)
+    
     return `
       <!DOCTYPE html>
       <html lang="pt-BR">
@@ -51,6 +55,8 @@ export function CertificatePDFGenerator({
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Certificado - ${certificate.curso_nome}</title>
         <style>
+          @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@400;700;900&display=swap');
+
           * {
             margin: 0;
             padding: 0;
@@ -58,263 +64,314 @@ export function CertificatePDFGenerator({
           }
           
           body {
-            font-family: 'Arial', sans-serif;
-            background: white;
+            font-family: 'Lato', 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f0f0;
             width: 297mm;
             height: 210mm;
             margin: 0;
-            padding: 20mm;
-            position: relative;
-            overflow: hidden;
-          }
-          
-          .certificate-container {
-            width: 100%;
-            height: 100%;
-            border: 2px solid #333;
-            position: relative;
-            background: white;
+            padding: 0;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            text-align: center;
+            color: #333;
           }
           
+          /* Container da Borda Externa (Cor do Fundo do Logo) */
+          .certificate-border {
+            width: 280mm;
+            height: 195mm;
+            border: 3px solid #333333; /* Cor escura do logo */
+            background: white;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+          }
+
+          /* Container da Borda Interna (Cor do Texto do Logo) */
+          .certificate-inner-border {
+            width: 100%;
+            height: 100%;
+            border: 6px solid #00aa00; /* Verde da marca */
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            /* Textura sutil de fundo */
+            background-image: radial-gradient(#333 0.5px, transparent 0.5px);
+            background-size: 30px 30px;
+            background-color: #ffffff;
+          }
+          
+          /* LOGOTIPO ORIGINAL MANTIDO */
           .era-logo {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
             background: #333;
             color: #00ff00;
-            padding: 10px 20px;
-            font-weight: bold;
-            font-size: 24px;
-            letter-spacing: 2px;
-          }
-          
-          .title {
-            font-size: 32px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-          }
-          
-          .subtitle {
-            font-size: 16px;
-            color: #666;
-            margin-bottom: 40px;
-          }
-          
-          .recipient-name {
+            padding: 10px 25px;
+            font-weight: 900;
             font-size: 28px;
-            font-weight: bold;
-            color: #333;
+            letter-spacing: 3px;
             margin-bottom: 20px;
-            max-width: 80%;
-            word-wrap: break-word;
+            border: 2px solid #00aa00;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+            text-transform: uppercase;
+            z-index: 20;
           }
           
-          .course-info {
-            font-size: 18px;
-            color: #333;
-            margin-bottom: 10px;
-          }
-          
-          .course-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 20px;
-            max-width: 90%;
-            word-wrap: break-word;
-          }
-          
-          .completion-date {
-            font-size: 16px;
-            color: #666;
-            margin-bottom: 40px;
-          }
-          
-          .watermark {
+          /* Marca d'água de fundo */
+          .watermark-logo {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 120px;
-            color: rgba(0, 255, 0, 0.1);
+            opacity: 0.03;
+            font-size: 200px;
             font-weight: bold;
-            z-index: 1;
+            color: #333;
+            z-index: 0;
             pointer-events: none;
+            font-family: 'Playfair Display', serif;
           }
           
-          .content {
-            position: relative;
-            z-index: 2;
+          .content-layer {
+            z-index: 10;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
           }
           
-          .signatures {
-            position: absolute;
-            bottom: 80px;
-            left: 0;
-            right: 0;
+          /* Cabeçalho */
+          .header {
+            margin-bottom: 10px;
+          }
+          
+          .title {
+            font-family: 'Playfair Display', serif;
+            font-size: 56px;
+            color: #333;
+            margin-bottom: 5px;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+          }
+          
+          .subtitle {
+            font-size: 18px;
+            color: #555;
+            font-style: italic;
+            margin-top: 0;
+          }
+          
+          /* Seção do Aluno */
+          .recipient-section {
+            margin: 15px 0;
+          }
+          
+          .recipient-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 48px;
+            color: #333; 
+            border-bottom: 2px solid #00aa00; /* Linha verde */
+            display: inline-block;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            min-width: 500px;
+          }
+          
+          .action-text {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #444;
+          }
+          
+          .course-title {
+            font-size: 36px;
+            font-weight: 900;
+            color: #333;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+          
+          /* Grid de Detalhes Técnicos */
+          .details-grid {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            margin-top: 20px;
+            color: #444;
+            font-size: 14px;
+            background: #f9f9f9;
+            padding: 15px 30px;
+            border-radius: 50px;
+            border: 1px solid #ddd;
+            display: inline-flex;
+          }
+          
+          .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+          }
+          
+          .detail-item strong {
+            color: #00aa00; /* Verde nos títulos dos detalhes */
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 900;
+          }
+          
+          .detail-item span {
+            font-size: 16px;
+            font-weight: 700;
+            color: #333;
+          }
+          
+          /* Assinaturas e Rodapé */
+          .footer-section {
+            margin-top: auto;
             display: flex;
             justify-content: space-between;
-            padding: 0 40px;
+            align-items: flex-end;
+            padding: 0 20px;
+            margin-bottom: 10px;
           }
           
-          .signature {
+          .signature-block {
             text-align: center;
+            width: 250px;
           }
           
           .signature-line {
-            width: 200px;
-            height: 2px;
-            background: #333;
-            margin-bottom: 10px;
+            border-top: 1px solid #333;
+            margin-bottom: 8px;
           }
           
-          .signature-name {
-            font-size: 14px;
+          .signer-name {
             font-weight: bold;
+            font-size: 16px;
             color: #333;
           }
           
-          .signature-title {
+          .signer-role {
             font-size: 12px;
             color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
           }
           
-          .era-stamp {
+          /* Selo Personalizado com Cores da Marca */
+          .seal-container {
+            width: 110px;
+            height: 110px;
+            background: #333; /* Fundo Preto do Selo */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #00ff00; /* Texto Verde Neon */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            position: relative;
+            bottom: 10px;
+            border: 4px double #00aa00;
+          }
+          
+          .seal-inner {
+            width: 95px;
+            height: 95px;
+            border: 1px dashed rgba(0, 255, 0, 0.5);
+            border-radius: 50%;
             display: flex;
             flex-direction: column;
             align-items: center;
-          }
-          
-          .stamp-circle {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #333;
-            display: flex;
-            align-items: center;
             justify-content: center;
-            margin-bottom: 10px;
+            font-size: 10px;
+            text-align: center;
+            line-height: 1.4;
+            font-weight: bold;
+            text-transform: uppercase;
           }
           
-          .star {
-            color: white;
-            font-size: 20px;
+          .seal-star {
+            font-size: 24px;
+            margin-bottom: 2px;
+            color: #00ff00;
           }
           
-          .footer-bar {
+          /* Link de Validação Discreto */
+          .validation-link {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: #333;
-            color: white;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 12px;
-          }
-          
-          .footer-left {
-            display: flex;
-            gap: 30px;
-          }
-          
-          .footer-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-          }
-          
-          .qr-code {
-            width: 30px;
-            height: 30px;
-            background: white;
-            border: 1px solid #ccc;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 8px;
-            color: #333;
-          }
-          
-          /* Theme variations */
-          body.theme-minimal {
-            background: #f8f9fa;
-          }
-          
-          body.theme-minimal .certificate-container {
-            border: 1px solid #dee2e6;
-            background: white;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          }
-          
-          body.theme-tech {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          }
-          
-          body.theme-tech .certificate-container {
-            border: 3px solid #667eea;
-            background: white;
-            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
-          }
-          
-          body.theme-tech .era-logo {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+            font-size: 10px;
+            color: #888;
           }
         </style>
       </head>
-      <body class="theme-${theme}">
-        <div class="certificate-container">
-          <div class="era-logo">ERA</div>
-          
-          <div class="watermark">ERA</div>
-          
-          <div class="content">
-            <div class="title">Certificado de Conclusão</div>
-            <div class="subtitle">É com grande satisfação que certificamos que</div>
+      <body>
+        <div class="certificate-border">
+          <div class="certificate-inner-border">
             
-            <div class="recipient-name">${certificate.usuario_nome}</div>
+            <div class="watermark-logo">ERA</div>
             
-            <div class="course-info">concluiu com sucesso o curso</div>
-            <div class="course-title">${certificate.curso_nome}</div>
-            <div class="completion-date">em ${formattedDate}</div>
-          </div>
-          
-          <div class="signatures">
-            <div class="signature">
-              <div class="signature-line"></div>
-              <div class="signature-name">Dr. João Silva</div>
-              <div class="signature-title">Instrutor</div>
-            </div>
-            
-            <div class="signature era-stamp">
-              <div class="stamp-circle">
-                <div class="star">★</div>
+            <div class="content-layer">
+              <div style="display: flex; justify-content: center;">
+                <div class="era-logo">ERA</div>
               </div>
-              <div class="signature-name">ERA</div>
-              <div class="signature-title">ERA</div>
-            </div>
-          </div>
-          
-          <div class="footer-bar">
-            <div class="footer-left">
-              <span>ID: ${shortId}</span>
-              <span>Carga Horária: ${certificate.carga_horaria} horas</span>
-              <span>São Paulo, Brasil - ${formattedDate}</span>
-            </div>
-            <div class="footer-right">
-              <span>Verificar: https://verify.era.com</span>
-              <div class="qr-code">QR</div>
+
+              <div class="header">
+                <div class="title">Certificado de Conclusão</div>
+                <div class="subtitle">Certificamos para os devidos fins que</div>
+              </div>
+              
+              <div class="recipient-section">
+                <div class="recipient-name">${certificate.usuario_nome}</div>
+                <div class="action-text">concluiu com êxito o curso profissionalizante</div>
+                <div class="course-title">${certificate.curso_nome}</div>
+                
+                <div class="details-grid">
+                  <div class="detail-item">
+                    <strong>Data de Emissão</strong>
+                    <span>${formattedDate}</span>
+                  </div>
+                  <div class="detail-item">
+                    <strong>Carga Horária</strong>
+                    <span>${certificate.carga_horaria} Horas</span>
+                  </div>
+                  <div class="detail-item">
+                    <strong>Código de Validação</strong>
+                    <span>${shortId}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="footer-section">
+                <div class="signature-block">
+                  <div class="signature-line"></div>
+                  <div class="signer-name">Diretoria Acadêmica</div>
+                  <div class="signer-role">ERA Learn Education</div>
+                </div>
+                
+                <div class="seal-container">
+                    <div class="seal-inner">
+                        <div class="seal-star">★</div>
+                        Certificado<br>Verificado<br>ERA
+                    </div>
+                </div>
+                
+                <div class="signature-block">
+                  <div class="signature-line"></div>
+                  <div class="signer-name">Coordenação de Ensino</div>
+                  <div class="signer-role">Responsável Técnico</div>
+                </div>
+              </div>
+              
+              <div class="validation-link">
+                A autenticidade deste documento pode ser verificada em https://verify.era.com
+              </div>
             </div>
           </div>
         </div>
@@ -335,12 +392,12 @@ export function CertificatePDFGenerator({
 
       // Capturar o HTML como canvas
       const canvas = await html2canvas(tempDiv.firstElementChild as HTMLElement, {
-        width: 297,
-        height: 210,
-        scale: 2,
+        width: 297, // A4 Landscape mm
+        height: 210, // A4 Landscape mm
+        scale: 2, // Melhor qualidade
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#f0f0f0' 
       });
 
       // Remover elemento temporário

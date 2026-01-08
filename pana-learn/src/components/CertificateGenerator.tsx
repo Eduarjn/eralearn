@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Download, Share2, QrCode, Award, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CertificatePDFGenerator } from './CertificatePDFGenerator';
+// Importação necessária para o botão funcionar
+import { downloadCertificateAsPDF } from '@/utils/certificateGenerator';
 
 interface CertificateData {
   id: string;
@@ -16,8 +18,12 @@ interface CertificateData {
   carga_horaria: number;
   nota: number;
   status: string;
+  usuario_nome?: string; // Adicionado como opcional
   certificado_url?: string;
   qr_code_url?: string;
+  // Campos adicionais para compatibilidade
+  usuarios?: { nome: string };
+  cursos?: { nome: string };
 }
 
 interface CertificateGeneratorProps {
@@ -145,7 +151,7 @@ export function CertificateGenerator({
     }
   };
 
-  const downloadCertificate = () => {
+  const downloadCertificate = async () => {
     if (!certificate) return;
     
     toast({
@@ -153,6 +159,25 @@ export function CertificateGenerator({
       description: "Preparando certificado para download...",
       variant: "default"
     });
+
+    // CORREÇÃO: Chama a função utilitária para baixar o certificado
+    try {
+      const success = await downloadCertificateAsPDF(certificate as any);
+      if (success) {
+        toast({
+          title: "Sucesso",
+          description: "Certificado baixado com sucesso!",
+          variant: "default"
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao baixar:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao gerar o arquivo.",
+        variant: "destructive"
+      });
+    }
   };
 
   const shareCertificate = () => {
@@ -231,7 +256,7 @@ export function CertificateGenerator({
             </Badge>
           </div>
           
-                     <div className="space-y-3 pt-2">
+           <div className="space-y-3 pt-2">
              <div className="flex gap-2">
                <Button
                  onClick={downloadCertificate}
@@ -253,6 +278,7 @@ export function CertificateGenerator({
                </Button>
              </div>
              
+             {/* Opções de tema para o visualizador abaixo */}
              <div className="space-y-2">
                <label className="text-sm font-medium text-gray-700">Tema do Certificado:</label>
                <div className="flex gap-2">
@@ -286,7 +312,8 @@ export function CertificateGenerator({
              <CertificatePDFGenerator
                certificate={{
                  ...certificate,
-                 usuario_nome: certificate.curso_nome // Temporário, será substituído pelo nome real
+                 // CORREÇÃO: Usa o nome do usuário correto se disponível, senão fallback
+                 usuario_nome: certificate.usuario_nome || certificate.usuarios?.nome || 'Aluno'
                }}
                theme={selectedTheme}
                onGenerated={(pdfBlob) => {
