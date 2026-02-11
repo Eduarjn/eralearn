@@ -6,9 +6,9 @@ import { useAuth } from "../hooks/useAuth"
 import { useBranding } from "../context/BrandingContext"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Loader2, Eye, EyeOff, Mail, User, Lock } from "lucide-react"
+// Adicionado ícone Building
+import { Loader2, Eye, EyeOff, Mail, User, Lock, Building } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
-// Importante: Adicionei este import para garantir que as imagens carreguem corretamente
 import { resolveLogoPath, resolveBackgroundPath } from "@/utils/imageUtils"
 
 const SENHA_ADMIN = "admin123"
@@ -28,7 +28,6 @@ export function AuthForm() {
     const [resetError, setResetError] = useState("")
     const [backgroundLoaded, setBackgroundLoaded] = useState(false)
 
-    // Efeito para carregar a imagem de fundo suavemente
     useEffect(() => {
         if (branding?.background_url) {
             const img = new Image()
@@ -99,11 +98,18 @@ export function AuthForm() {
         const email = formData.get("email") as string
         const password = formData.get("password") as string
         const nome = formData.get("nome") as string
+        const empresa = formData.get("empresa") as string // Captura o campo empresa
         const tipoUsuario = formData.get("tipo_usuario") as "admin" | "cliente"
         const senhaValidacao = formData.get("senha_validacao") as string
 
         if (!nome || nome.trim() === "") {
             setError("Nome é obrigatório")
+            setLoading(false)
+            return
+        }
+
+        if (!empresa || empresa.trim() === "") {
+            setError("Empresa é obrigatória")
             setLoading(false)
             return
         }
@@ -132,7 +138,8 @@ export function AuthForm() {
                 password,
                 nome.trim(),
                 tipoUsuario,
-                tipoUsuario === "admin" ? senhaValidacao : null,
+                tipoUsuario === "admin" ? senhaValidacao : "",
+                empresa.trim() // Passa a empresa para a função signUp atualizada
             )
 
             if (error) {
@@ -148,7 +155,6 @@ export function AuthForm() {
         setLoading(false)
     }
 
-    // --- AQUI COMEÇA O NOVO VISUAL ---
     return (
         <div 
             className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-black"
@@ -160,7 +166,6 @@ export function AuthForm() {
                 `
             }}
         >
-            {/* Background Image com blend suave (se configurada) */}
             <div 
                 className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-700 ${
                     backgroundLoaded ? 'opacity-30' : 'opacity-0'
@@ -173,7 +178,6 @@ export function AuthForm() {
                 }}
             />
 
-            {/* Bolhas Animadas de Fundo (Verde/Emerald) */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div
                     className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full opacity-20 animate-pulse"
@@ -193,7 +197,6 @@ export function AuthForm() {
                 ></div>
             </div>
 
-            {/* Container principal */}
             <div className="relative z-10 w-full max-w-md">
                 <div className="text-center mb-8">
                     <div className="flex justify-center mb-4">
@@ -210,7 +213,6 @@ export function AuthForm() {
                     <p className="text-white/60 text-sm font-medium tracking-wide">Plataforma de Ensino Online</p>
                 </div>
 
-                {/* Card com Glassmorphism Escuro */}
                 <div
                     className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-3xl shadow-2xl p-8 transition-all duration-300"
                     style={{
@@ -228,7 +230,6 @@ export function AuthForm() {
                         >
                             Entrar
                         </button>
-                        {/* Botão Cadastrar removido da UI conforme solicitado, mas a lógica existe */}
                     </div>
 
                     <div className="text-center mb-8">
@@ -244,7 +245,6 @@ export function AuthForm() {
                         </p>
                     </div>
 
-                    {/* Alertas */}
                     {error && (
                         <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl backdrop-blur-sm">
                             <p className="text-red-200 text-sm font-medium text-center">{error}</p>
@@ -257,7 +257,6 @@ export function AuthForm() {
                         </div>
                     )}
 
-                    {/* Formulário de Login */}
                     {activeTab === "login" && (
                         <form onSubmit={handleSignIn} className="space-y-6">
                             <div className="relative">
@@ -314,7 +313,6 @@ export function AuthForm() {
                         </form>
                     )}
 
-                    {/* Formulário de Recuperação de Senha */}
                     {activeTab === "forgot" && (
                         <form onSubmit={handleForgotPassword} className="space-y-6">
                             <div className="relative">
@@ -370,7 +368,6 @@ export function AuthForm() {
                         </form>
                     )}
 
-                    {/* Formulário de Cadastro */}
                     {activeTab === "register" && (
                         <form onSubmit={handleSignUp} className="space-y-6">
                             <div className="relative">
@@ -383,6 +380,19 @@ export function AuthForm() {
                                     placeholder="Seu nome completo"
                                 />
                             </div>
+                            
+                            {/* NOVO CAMPO EMPRESA */}
+                            <div className="relative">
+                                <Building className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/40 h-5 w-5 z-10" />
+                                <Input
+                                    name="empresa"
+                                    type="text"
+                                    required
+                                    className="w-full bg-black/30 border-white/10 text-white placeholder-white/30 rounded-2xl pl-12 pr-4 py-6 focus:bg-black/50 focus:border-emerald-500/50"
+                                    placeholder="Nome da Empresa"
+                                />
+                            </div>
+
                             <div className="relative">
                                 <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/40 h-5 w-5 z-10" />
                                 <Input

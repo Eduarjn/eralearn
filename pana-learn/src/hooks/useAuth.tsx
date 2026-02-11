@@ -8,6 +8,7 @@ interface UserProfile {
     id: string
     email: string
     nome: string
+    empresa?: string // ✅ Adicionado campo empresa
     tipo_usuario: "admin" | "admin_master" | "cliente"
     status: string
     avatar_url?: string
@@ -26,6 +27,7 @@ interface AuthContextType {
         nome: string,
         tipo_usuario: "admin" | "cliente",
         senha_validacao: string,
+        empresa: string, // ✅ Adicionado parâmetro empresa
     ) => Promise<{ error: Error | { message: string } | null }>
     signOut: () => Promise<void>
     createTestUsers: () => Promise<void>
@@ -264,6 +266,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         nome: string,
         tipo_usuario: "admin" | "cliente",
         senha_validacao: string,
+        empresa: string, // ✅ Recebendo empresa aqui
     ) => {
         try {
             setLoading(true)
@@ -273,6 +276,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (password.length < 6) {
                 return { error: { message: "Senha deve ter pelo menos 6 caracteres" } }
             }
+            // ✅ Validação da empresa
+            if (!empresa || empresa.trim() === "") {
+                return { error: { message: "Nome da empresa é obrigatório" } }
+            }
+
             const redirectUrl = `${window.location.origin}/`
 
             // Criar usuário no Supabase Auth
@@ -284,6 +292,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     data: {
                         nome: nome.trim(),
                         tipo_usuario: tipo_usuario,
+                        empresa: empresa.trim(), // ✅ Enviando empresa nos metadados
                     },
                 },
             })
@@ -299,10 +308,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
                 return { error: { message: errorMessage } }
             }
-
-            // ✅ CORREÇÃO: Remover inserção manual redundante
-            // O trigger handle_new_user deve criar automaticamente o registro na tabela usuarios
-            // Se o trigger falhar, o erro será capturado pelo próprio Supabase Auth
 
             console.log("Usuário criado no Auth, aguardando trigger handle_new_user...")
             return { error: null }

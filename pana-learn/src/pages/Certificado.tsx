@@ -14,12 +14,12 @@ import {
   Copy, 
   Check,
   ArrowLeft,
-  QrCode,
-  Calendar,
-  User,
-  Award
+  Award,
+  Loader2
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface CertificateData {
   id: string;
@@ -28,6 +28,7 @@ interface CertificateData {
   categoria_nome: string;
   nota: number;
   data_conclusao: string;
+  numero_certificado?: string;
   certificado_url?: string;
   qr_code_url?: string;
   usuario?: {
@@ -42,11 +43,11 @@ interface CertificateData {
 
 const Certificado: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { userProfile } = useAuth();
   const { branding } = useBranding();
   const navigate = useNavigate();
   const [certificate, setCertificate] = useState<CertificateData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -92,64 +93,161 @@ const Certificado: React.FC = () => {
     }
   };
 
-  const handleDownload = async () => {
-    // 1. Validação inicial com logs para debug
-    console.log("Botão de download clicado. Dados:", certificate);
-
-    if (!certificate?.certificado_url) {
-      console.warn("URL vazia.");
-      toast({
-        title: "Certificado indisponível",
-        description: "O arquivo ainda não foi gerado pelo sistema.",
-        variant: "destructive"
+  const getBase64ImageFromUrl = async (imageUrl: string): Promise<string | null> => {
+    try {
+      const res = await fetch(imageUrl, { mode: 'cors' });
+      const blob = await res.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
       });
-      return;
+    } catch (e) {
+      console.warn("Falha ao converter imagem para base64 (CORS restritivo?), tentando direto...", e);
+      return null;
     }
+  };
+
+  const handleDownload = async () => {
+    if (!certificate) return;
+    setGeneratingPdf(true);
 
     try {
+      // 1. TENTA O DOWNLOAD DIRETO SE TIVER URL SALVA NO BANCO
+      if (certificate.certificado_url) {
+        console.log("Tentando baixar via URL existente:", certificate.certificado_url);
+        try {
+          const response = await fetch(certificate.certificado_url);
+          if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `certificado-${certificate.categoria_nome}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            toast({ title: "Download concluído!" });
+            setGeneratingPdf(false);
+            return;
+          }
+        } catch (e) {
+          console.warn("Falha no download direto, indo para geração manual:", e);
+        }
+      }
+
+      // 2. SE NÃO DEU CERTO, GERA O PDF NA HORA (MANUAL)
       toast({
-        title: "Iniciando download...",
-        description: "Aguarde enquanto preparamos o arquivo.",
+        title: "Gerando Certificado",
+        description: "Criando arquivo de alta qualidade...",
       });
 
-      // 2. Busca o arquivo via código (Fetch)
-      // Isso "engana" o navegador para baixar o arquivo ao invés de só abrir
-      const response = await fetch(certificate.certificado_url);
-      
-      if (!response.ok) throw new Error('Falha na requisição do arquivo');
-      
-      const blob = await response.blob(); // Transforma em objeto binário
-      const url = window.URL.createObjectURL(blob); // Cria URL temporária na memória
+      let logoSrc = branding.logo_url;
+      if (logoSrc) {
+        const base64 = await getBase64ImageFromUrl(logoSrc);
+        if (base64) logoSrc = base64;
+      }
 
-      // 3. Cria o link de download forçado
-      const link = document.createElement('a');
-      link.href = url;
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.top = '0';
       
-      // Define um nome de arquivo limpo e profissional
+      const formattedDate = new Date(certificate.data_conclusao).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+      const shortId = certificate.id.slice(0, 8).toUpperCase();
+      
+      // --- HTML AJUSTADO PARA O PDF ---
+      tempDiv.innerHTML = `
+        <div style="font-family: 'Arial', sans-serif; width: 1122px; height: 794px; padding: 40px; background: white; display: flex; justify-content: center; align-items: center; box-sizing: border-box;">
+          <div style="width: 100%; height: 100%; border: 10px double #333; padding: 40px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative;">
+            
+            ${logoSrc ? `<img src="${logoSrc}" style="height: 90px; margin-bottom: 20px; object-fit: contain;" />` : '<h1 style="font-size: 40px;">ERA LEARN</h1>'}
+            
+            <h1 style="font-size: 48px; color: #111; text-transform: uppercase; margin: 10px 0; letter-spacing: 2px;">Certificado de Conclusão</h1>
+            
+            <p style="font-size: 24px; color: #666; margin: 20px 0; font-style: italic;">Certificamos para os devidos fins que</p>
+            
+            <h2 style="font-size: 50px; font-weight: bold; color: #000; margin: 20px 0; border-bottom: 2px solid #ddd; padding-bottom: 10px; min-width: 60%; text-transform: capitalize;">
+              ${certificate.usuario?.nome}
+            </h2>
+            
+            <p style="font-size: 24px; color: #444;">concluiu com êxito o curso de formação profissional em</p>
+            
+            <h3 style="font-size: 42px; font-weight: bold; color: #2563eb; margin: 20px 0; text-transform: uppercase;">
+              ${certificate.categoria_nome}
+            </h3>
+            
+            <div style="margin: 30px 0; display: flex; gap: 20px; justify-content: center;">
+              <span style="background: #f3f4f6; padding: 10px 25px; border-radius: 50px; border: 1px solid #d1d5db; font-size: 18px; font-weight: bold;">
+                Carga Horária: 1h
+              </span>
+              <span style="background: #a3e635; color: black; padding: 10px 25px; border-radius: 50px; font-size: 18px; font-weight: bold;">
+                Aproveitamento: ${certificate.nota}%
+              </span>
+            </div>
+
+            <div style="margin-top: auto; width: 100%; display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: flex-end; text-align: center; padding-bottom: 30px;">
+              
+              <div style="text-align: left;">
+                <div style="font-size: 12px; color: #999; text-transform: uppercase;">Data de Emissão</div>
+                <div style="font-size: 16px; font-weight: bold; color: #333; margin-top: 5px;">${formattedDate}</div>
+                <div style="font-size: 12px; color: #666;">São Paulo, Brasil</div>
+              </div>
+              
+              <div>
+                <div style="font-weight: bold; font-size: 22px; color: #000; font-family: cursive; margin-bottom: 15px;">Sabrina Coghe</div>
+                <div style="width: 250px; height: 1px; background: #333; margin: 0 auto 10px auto;"></div>
+                <div style="font-size: 14px; font-weight: bold; color: #333;">Gerente de Operações</div>
+                <div style="font-size: 12px; color: #666;">ERA</div>
+              </div>
+              
+              <div style="text-align: right;">
+                <div style="font-size: 12px; color: #999; text-transform: uppercase;">Validação</div>
+                <div style="font-family: monospace; font-size: 14px; color: #333; margin-top: 5px;">ID: ${shortId}</div>
+                <div style="font-size: 10px; color: #666;">Verifique a autenticidade<br>no portal do aluno.</div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      `;
+      document.body.appendChild(tempDiv);
+
+      const images = Array.from(tempDiv.getElementsByTagName('img'));
+      await Promise.all(images.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; });
+      }));
+
+      const canvas = await html2canvas(tempDiv.firstElementChild as HTMLElement, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      document.body.removeChild(tempDiv);
+
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const imgData = canvas.toDataURL('image/png');
+      pdf.addImage(imgData, 'PNG', 0, 0, 297, 210);
+      
       const nomeLimpo = certificate.categoria_nome.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      link.download = `certificado_era_learn_${nomeLimpo}.pdf`;
+      pdf.save(`certificado_era_${nomeLimpo}.pdf`);
       
-      document.body.appendChild(link);
-      link.click();
-      
-      // 4. Limpeza
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url); // Libera memória
-      console.log("Download concluído com sucesso.");
+      toast({ title: "Sucesso!", description: "Download do PDF iniciado." });
 
     } catch (error) {
-      console.error("Erro no download direto:", error);
-      
-      // 5. FALLBACK (Plano B)
-      // Se o método acima falhar (ex: bloqueio de CORS), abre em nova aba
-      console.log("Tentando método alternativo (Nova Aba)...");
-      window.open(certificate.certificado_url, '_blank');
-      
-      toast({
-        title: "Download alternativo",
-        description: "Não foi possível baixar direto. Abrimos o PDF em uma nova aba para você salvar.",
-        variant: "default"
+      console.error('Erro PDF:', error);
+      toast({ 
+        title: "Erro ao gerar PDF", 
+        description: "Tente novamente ou contate o suporte.", 
+        variant: "destructive" 
       });
+    } finally {
+      setGeneratingPdf(false);
     }
   };
 
@@ -157,26 +255,25 @@ const Certificado: React.FC = () => {
     if (!certificate) return;
 
     const shareUrl = `${window.location.origin}/certificado/${certificate.id}`;
-    const shareText = `🎉 ${certificate.usuario?.nome} concluiu o curso ${certificate.categoria_nome} com ${certificate.nota}% de aproveitamento!`;
     
     try {
       switch (platform) {
         case 'linkedin': {
-          const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareText)}`;
+          const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
           window.open(linkedinUrl, '_blank');
           break;
         }
         case 'facebook': {
-          const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`;
+          const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
           window.open(facebookUrl, '_blank');
           break;
         }
         case 'copy':
-          await navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`);
+          await navigator.clipboard.writeText(shareUrl);
           setCopied(true);
           toast({
             title: "Link copiado!",
-            description: "O link do certificado foi copiado para a área de transferência.",
+            description: "O link foi copiado para a área de transferência.",
             variant: "default"
           });
           setTimeout(() => setCopied(false), 2000);
@@ -185,7 +282,7 @@ const Certificado: React.FC = () => {
     } catch (error) {
       toast({
         title: "Erro ao compartilhar",
-        description: "Não foi possível compartilhar. Tente novamente.",
+        description: "Não foi possível compartilhar.",
         variant: "destructive"
       });
     }
@@ -195,7 +292,7 @@ const Certificado: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <Loader2 className="h-12 w-12 animate-spin text-gray-900 mx-auto mb-4" />
           <p className="text-gray-600">Carregando certificado...</p>
         </div>
       </div>
@@ -217,7 +314,6 @@ const Certificado: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 py-8 font-sans">
       <div className="max-w-5xl mx-auto px-4">
-        {/* Header de Navegação */}
         <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
           <Button
             onClick={() => navigate('/dashboard')}
@@ -231,22 +327,23 @@ const Certificado: React.FC = () => {
           <div className="flex gap-2">
             <Button
               onClick={handleDownload}
+              disabled={generatingPdf}
               className="bg-black text-white hover:bg-gray-800"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Baixar PDF
+              {generatingPdf ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 mr-2" />
+              )}
+              {generatingPdf ? "Gerando PDF..." : "Baixar PDF"}
             </Button>
           </div>
         </div>
 
-        {/* CONTAINER DO CERTIFICADO */}
-        <Card className="bg-white shadow-2xl border-0 overflow-hidden relative print:shadow-none print:w-full">
+        <Card className="bg-white shadow-2xl border-0 overflow-hidden relative">
           <CardContent className="p-0">
-            
-            {/* Template do Certificado */}
             <div className="relative bg-white p-1 md:p-12 min-h-[600px] flex flex-col justify-between">
               
-              {/* 1. Marca D'água (Background Logo) */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
                 <img 
                   src={branding.logo_url} 
@@ -255,13 +352,10 @@ const Certificado: React.FC = () => {
                 />
               </div>
 
-              {/* 2. Borda Decorativa Interna */}
               <div className="absolute inset-4 md:inset-6 border-[3px] border-double border-gray-300 pointer-events-none rounded-sm"></div>
               
-              {/* Conteúdo Centralizado */}
               <div className="relative z-10 flex flex-col items-center text-center space-y-8 py-8">
                 
-                {/* Cabeçalho da Marca */}
                 <div className="mb-6">
                   <img 
                     src={branding.logo_url} 
@@ -270,7 +364,6 @@ const Certificado: React.FC = () => {
                   />
                 </div>
 
-                {/* Título Oficial */}
                 <div>
                   <h1 className="text-3xl md:text-4xl font-serif text-gray-900 tracking-wide uppercase mb-2">
                     Certificado de Conclusão
@@ -278,17 +371,14 @@ const Certificado: React.FC = () => {
                   <div className="w-24 h-1 bg-lime-400 mx-auto rounded-full"></div>
                 </div>
 
-                {/* Texto Introdutório */}
                 <p className="text-gray-500 text-lg font-serif italic">
                   Certificamos para os devidos fins que
                 </p>
 
-                {/* Nome do Aluno */}
                 <h2 className="text-4xl md:text-5xl font-bold text-gray-900 capitalize tracking-tight">
                   {certificate.usuario?.nome}
                 </h2>
 
-                {/* Detalhes do Curso */}
                 <div className="space-y-2">
                   <p className="text-gray-500 text-lg">concluiu com êxito o curso de formação profissional em</p>
                   <h3 className="text-3xl font-bold text-lime-600 uppercase tracking-wider">
@@ -296,7 +386,6 @@ const Certificado: React.FC = () => {
                   </h3>
                 </div>
 
-                {/* Badges e Infos Extras */}
                 <div className="flex flex-wrap items-center justify-center gap-4 mt-4">
                   <Badge variant="outline" className="px-4 py-1 text-sm border-gray-300 bg-gray-50 text-gray-700">
                     Carga Horária: 1h
@@ -306,62 +395,43 @@ const Certificado: React.FC = () => {
                   </Badge>
                 </div>
 
-                {/* Descrição Curta (Opcional) */}
                 {certificate.curso?.descricao && (
                   <p className="text-gray-500 max-w-2xl text-sm leading-relaxed mt-4">
                     {certificate.curso.descricao.slice(0, 150)}...
                   </p>
                 )}
-
               </div>
 
-              {/* Rodapé do Certificado */}
               <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-8 mt-12 px-8 items-end">
-                
-                {/* Data e Local */}
                 <div className="text-center md:text-left">
                   <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Data de Emissão</p>
                   <p className="text-sm font-medium text-gray-700">
-                    {new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    {new Date(certificate.data_conclusao).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">São Paulo, Brasil</p>
                 </div>
 
-                {/* Assinatura (Centro) */}
                 <div className="text-center">
-                  {/* Espaço para assinatura imagem se houver, ou linha */}
-                  <p className="font-bold text-gray-800">Sabrina Coghe </p>
+                  <p className="font-bold text-gray-800">Sabrina Coghe</p>
                   <div className="w-full h-px bg-gray-300 mb-4"></div>
                   <p className="font-bold text-gray-800">Gerente de operações</p>
                   <p className="text-xs text-gray-500">ERA</p>
                 </div>
 
-                {/* Código de Validação */}
                 <div className="text-center md:text-right">
                   <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Validação</p>
                   <p className="text-xs font-mono text-gray-500 break-all">
-                    ID: {certificate.id.slice(0, 8)}
+                    ID: {certificate.id.slice(0, 8).toUpperCase()}
                   </p>
                   <p className="text-[10px] text-gray-400 mt-1">
                     Verifique a autenticidade deste documento no portal.
                   </p>
                 </div>
-
               </div>
-
-              {/* QR Code (COMENTADO conforme solicitado)
-              <div className="absolute bottom-8 right-8 print:block">
-                <div className="bg-white p-2 rounded shadow-sm border border-gray-100">
-                   <QrCode className="w-12 h-12 text-gray-800" />
-                </div>
-              </div>
-              */}
-
             </div>
           </CardContent>
         </Card>
 
-        {/* Footer de Compartilhamento Externo */}
         <Card className="mt-8 bg-gray-50 border border-gray-200">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center justify-center gap-2 text-base text-gray-600">

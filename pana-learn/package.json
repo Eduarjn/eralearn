@@ -64,7 +64,7 @@
     "framer-motion": "^12.23.26",
     "html2canvas": "^1.4.1",
     "input-otp": "^1.2.4",
-    "jspdf": "^3.0.1",
+    "jspdf": "^3.0.4",
     "lucide-react": "^0.462.0",
     "multer": "^2.0.2",
     "next-themes": "^0.3.0",
@@ -87,6 +87,8 @@
   "devDependencies": {
     "@eslint/js": "^9.9.0",
     "@tailwindcss/typography": "^0.5.15",
+    "@types/html2canvas": "^1.0.0",
+    "@types/jspdf": "^2.0.0",
     "@types/node": "^22.5.5",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^18.3.3",

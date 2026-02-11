@@ -6,7 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Plus, Users, UserCheck, Shield, Edit, Trash2, Mail, Calendar, Clock, User, Download, MoreHorizontal, Smartphone, Award, Eye, Activity } from 'lucide-react';
+import { 
+  Search, Plus, Users, UserCheck, Shield, Edit, Trash2, Mail, Calendar, 
+  Clock, User, Download, MoreHorizontal, Smartphone, Award, Eye, 
+  Activity, Building, ChevronLeft, ChevronRight 
+} from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,6 +30,7 @@ interface UserListItem {
   data_atualizacao: string;
   ultimo_login?: string | null;
   login?: string;
+  empresa?: string | null;
 }
 
 interface UserStats {
@@ -48,6 +53,7 @@ const Usuarios = () => {
   const [newUser, setNewUser] = useState({
     nome: '',
     email: '',
+    empresa: '',
     senha: '',
     tipo: 'Cliente',
     status: 'Ativo'
@@ -74,8 +80,23 @@ const Usuarios = () => {
     userName: string;
     progress: Database['public']['Tables']['progresso_usuario']['Row'][];
   } | null>(null);
-  const [sortField, setSortField] = useState<'nome' | 'email' | 'ultimo_login' | 'tipo_usuario' | 'data_criacao'>('data_criacao');
+  const [sortField, setSortField] = useState<'nome' | 'email' | 'empresa' | 'ultimo_login' | 'tipo_usuario' | 'data_criacao'>('data_criacao');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // --- LÓGICA DE PAGINAÇÃO ---
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const [itensPorPagina, setItensPorPagina] = useState(15);
+
+  const indexUltimoItem = paginaAtual * itensPorPagina;
+  const indexPrimeiroItem = indexUltimoItem - itensPorPagina;
+  const usuariosAtuais = users.slice(indexPrimeiroItem, indexUltimoItem);
+  const totalPaginas = Math.ceil(users.length / itensPorPagina);
+
+  const handleMudarQtdItens = (qtd: number) => {
+    setItensPorPagina(qtd);
+    setPaginaAtual(1);
+  };
+  // ---------------------------
 
   // Detectar se é mobile
   useEffect(() => {
@@ -92,11 +113,10 @@ const Usuarios = () => {
   const fetchUsers = async (search = searchTerm) => {
     setLoading(true);
     try {
-      // Buscar todos os usuários do Supabase com contagem exata
       const { data: usersData, count, error } = await supabase
         .from('usuarios')
         .select('*', { count: 'exact' })
-        .order(sortField, { ascending: sortDirection === 'asc' });
+        .order(sortField === 'empresa' ? 'empresa' : sortField, { ascending: sortDirection === 'asc' });
 
       if (error) {
         console.error('Erro ao buscar usuários:', error);
@@ -108,17 +128,18 @@ const Usuarios = () => {
       const allUsersData = usersData || [];
       setAllUsers(allUsersData);
 
-      // Filtrar localmente se houver termo de busca
       let filteredUsers = allUsersData;
       if (search.trim()) {
         filteredUsers = allUsersData.filter(user => 
           user.nome?.toLowerCase().includes(search.toLowerCase()) ||
           user.email?.toLowerCase().includes(search.toLowerCase()) ||
+          user.empresa?.toLowerCase().includes(search.toLowerCase()) ||
           user.login?.toLowerCase().includes(search.toLowerCase())
         );
       }
 
       setUsers(filteredUsers);
+      setPaginaAtual(1); // Resetar para página 1 ao filtrar
 
       // Calcular estatísticas
       const now = new Date();
@@ -142,14 +163,12 @@ const Usuarios = () => {
     }
   };
 
-  // Carregar usuários quando o componente montar
   useEffect(() => {
     if (userProfile) {
       fetchUsers();
     }
   }, [userProfile]);
 
-  // Debounce para busca
   useEffect(() => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
@@ -170,7 +189,7 @@ const Usuarios = () => {
     fetchUsers();
   };
 
-  const handleSort = (field: 'nome' | 'email' | 'ultimo_login' | 'tipo_usuario' | 'data_criacao') => {
+  const handleSort = (field: 'nome' | 'email' | 'empresa' | 'ultimo_login' | 'tipo_usuario' | 'data_criacao') => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -190,7 +209,7 @@ const Usuarios = () => {
       return 'Agora mesmo';
     } else if (diffInHours < 24) {
       return `${diffInHours}h atrás`;
-    } else if (diffInHours < 168) { // 7 dias
+    } else if (diffInHours < 168) { 
       const days = Math.floor(diffInHours / 24);
       return `${days} dia${days > 1 ? 's' : ''} atrás`;
     } else {
@@ -273,6 +292,7 @@ const Usuarios = () => {
   const exportUsers = (format: 'csv' | 'json') => {
     const data = users.map(user => ({
       Nome: user.nome,
+      Empresa: user.empresa || '',
       Email: user.email,
       Login: user.login || '',
       Tipo: user.tipo_usuario,
@@ -318,6 +338,11 @@ const Usuarios = () => {
       return;
     }
 
+    if (!newUser.empresa) {
+        toast({ title: 'Campo obrigatório', description: 'O nome da empresa é obrigatório', variant: 'destructive' });
+        return;
+    }
+
     if (newUser.senha.length < 6) {
       toast({ title: 'Senha inválida', description: 'A senha deve ter pelo menos 6 caracteres', variant: 'destructive' });
       return;
@@ -329,7 +354,8 @@ const Usuarios = () => {
         newUser.senha,
         newUser.nome,
         newUser.tipo === 'Cliente' ? 'cliente' : 'admin',
-        '' // senha_validacao vazia para usuários criados por admin
+        '',
+        newUser.empresa
       );
 
       if (error) {
@@ -338,7 +364,7 @@ const Usuarios = () => {
       }
 
       toast({ title: 'Usuário criado com sucesso!' });
-      setNewUser({ nome: '', email: '', senha: '', tipo: 'Cliente', status: 'Ativo' });
+      setNewUser({ nome: '', email: '', empresa: '', senha: '', tipo: 'Cliente', status: 'Ativo' });
       setShowNewUserForm(false);
       fetchUsers();
     } catch (error) {
@@ -361,6 +387,7 @@ const Usuarios = () => {
         .update({
           nome: editingUser.nome,
           email: editingUser.email,
+          empresa: editingUser.empresa,
           tipo_usuario: editingUser.tipo_usuario as Database['public']['Enums']['user_type'],
           status: editingUser.status as Database['public']['Enums']['status_type'],
           data_atualizacao: new Date().toISOString()
@@ -382,7 +409,6 @@ const Usuarios = () => {
   const handleChangeUserPassword = async () => {
     if (!editingUser) return;
 
-    // Validações
     if (!newPassword || newPassword.length < 6) {
       toast({ title: 'Nova senha deve ter pelo menos 6 caracteres', variant: 'destructive' });
       return;
@@ -396,10 +422,8 @@ const Usuarios = () => {
     setChangingPassword(true);
 
     try {
-      // FIX CRÍTICO: Usar a função RPC segura para alterar a senha
-      // Nota: Passamos editingUser.user_id (ID da Auth) e não editingUser.id (ID da tabela)
       const { error } = await supabase.rpc('admin_update_user_password', {
-        target_user_id: editingUser.user_id, // Usando o ID correto para a tabela auth.users
+        target_user_id: editingUser.user_id,
         new_password: newPassword
       });
 
@@ -417,7 +441,6 @@ const Usuarios = () => {
     }
   };
 
-  // Função para visualizar certificados do usuário
   const handleViewCertificates = async (userId: string, userName: string) => {
     try {
       const { data: certificates, error } = await supabase
@@ -445,10 +468,8 @@ const Usuarios = () => {
     }
   };
 
-  // Função para visualizar progresso do usuário
   const handleViewProgress = async (userId: string, userName: string) => {
     try {
-      // Buscar progresso do usuário com informações dos cursos
       const { data: progress, error } = await supabase
         .from('progresso_usuario')
         .select(`
@@ -480,7 +501,6 @@ const Usuarios = () => {
   return (
     <ERALayout>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-green-50">
-        {/* Hero Section com gradiente - USUÁRIOS */}
         <div 
             className="page-hero w-full rounded-xl lg:rounded-2xl flex flex-col md:flex-row justify-between items-center p-4 lg:p-8 mb-6 lg:mb-8 shadow-md" 
             style={{background: 'linear-gradient(135deg, #2b363d 30%, #4A4A4A 60%, #cfff00 100%)'}}
@@ -490,7 +510,6 @@ const Usuarios = () => {
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 lg:gap-6">
                 <div className="flex-1">
                   
-                  {/* 1. Label (Delay 20ms) */}
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-2 h-2 bg-era-green rounded-full animate-pulse"></div>
                     <BlurText 
@@ -501,7 +520,6 @@ const Usuarios = () => {
                     />
                   </div>
 
-                  {/* 2. Título (Delay 50ms) */}
                   <div className="mb-2 lg:mb-3">
                     <BlurText 
                         text="Usuários"
@@ -512,7 +530,6 @@ const Usuarios = () => {
                     />
                   </div>
 
-                  {/* 3. Descrição (Delay 30ms) */}
                   <div className="mb-3 lg:mb-4 max-w-2xl">
                     <BlurText 
                         text="Gerencie usuários e permissões da plataforma"
@@ -522,7 +539,6 @@ const Usuarios = () => {
                     />
                   </div>
 
-                  {/* 4. Tags/Badges (Delay 20ms) */}
                   <div className="flex flex-wrap items-center gap-2 lg:gap-4 mt-3 lg:mt-4">
                     
                     <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm text-white/90">
@@ -549,7 +565,6 @@ const Usuarios = () => {
 
         <div className="px-4 lg:px-6 py-6 lg:py-8">
           <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8">
-            {/* Cards de Estatísticas */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
               <Card className="bg-gradient-to-r from-era-black via-era-gray-medium to-era-green text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-4 md:p-6">
@@ -597,7 +612,6 @@ const Usuarios = () => {
               </Card>
             </div>
 
-            {/* Barra de Busca + Botão */}
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
               <div className="flex items-center gap-2 flex-1 max-w-md">
                 <Search className="h-4 w-4 text-gray-400" />
@@ -643,7 +657,6 @@ const Usuarios = () => {
               </div>
             </div>
 
-            {/* Bulk Actions */}
             {selectedUsers.length > 0 && (
               <Card className="bg-blue-50 border-blue-200">
                 <CardContent className="p-4">
@@ -684,7 +697,6 @@ const Usuarios = () => {
               </Card>
             )}
 
-            {/* Formulário de Novo Usuário */}
             {showNewUserForm && (
               <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
                 <CardHeader className="bg-gradient-to-r from-era-black via-era-gray-medium to-era-green text-white">
@@ -701,6 +713,19 @@ const Usuarios = () => {
                         onChange={(e) => setNewUser({ ...newUser, nome: e.target.value })}
                         className="h-10 lg:h-12 text-sm lg:text-base border-2 border-gray-200 focus:border-blue-500 rounded-lg lg:rounded-xl transition-all duration-300"
                       />
+                    </div>
+                    <div>
+                      <Label htmlFor="empresa">Empresa *</Label>
+                      <div className="relative">
+                        <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="empresa"
+                          value={newUser.empresa}
+                          onChange={(e) => setNewUser({ ...newUser, empresa: e.target.value })}
+                          placeholder="Nome da empresa"
+                          className="pl-10 h-10 lg:h-12 text-sm lg:text-base border-2 border-gray-200 focus:border-blue-500 rounded-lg lg:rounded-xl transition-all duration-300"
+                        />
+                      </div>
                     </div>
                     <div>
                       <Label htmlFor="email">Email *</Label>
@@ -768,11 +793,10 @@ const Usuarios = () => {
               </Card>
             )}
 
-            {/* Tabela de Usuários */}
-            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl overflow-hidden">
-                              <CardHeader className="bg-gradient-to-r from-era-black via-era-gray-medium to-era-green text-white">
+            <Card className="text-white/90 backdrop-blur-sm border-0 shadow-xl overflow-hidden">
+                      <CardHeader className="bg-gradient-to-r from-era-black via-era-gray-medium to-era-green text-white">
                 <CardTitle className="flex items-center gap-3 text-white font-bold text-xl">
-                  <div className="p-2 bg-white/20 rounded-lg">
+                  <div className="p-2 text-white/20 rounded-lg">
                     <Users className="h-6 w-6" />
                   </div>
                   <span>Lista de Usuários</span>
@@ -796,6 +820,20 @@ const Usuarios = () => {
                           <div className="flex items-center gap-1">
                             Nome
                             {sortField === 'nome' && (
+                              <span className="text-era-green">
+                                {sortDirection === 'asc' ? '↑' : '↓'}
+                              </span>
+                            )}
+                          </div>
+                        </TableHead>
+                        {/* Nova Coluna Empresa */}
+                        <TableHead 
+                          className="font-medium text-era-black cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleSort('empresa')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Empresa
+                            {sortField === 'empresa' && (
                               <span className="text-era-green">
                                 {sortDirection === 'asc' ? '↑' : '↓'}
                               </span>
@@ -860,7 +898,7 @@ const Usuarios = () => {
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8">
+                          <TableCell colSpan={9} className="text-center py-8">
                             <div className="flex items-center justify-center">
                               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                               <span className="ml-2 text-gray-600">Carregando usuários...</span>
@@ -869,7 +907,7 @@ const Usuarios = () => {
                         </TableRow>
                       ) : users.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8">
+                          <TableCell colSpan={9} className="text-center py-8">
                             <div className="text-gray-500">
                               <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                               <p className="text-lg font-medium">Nenhum usuário encontrado</p>
@@ -878,7 +916,7 @@ const Usuarios = () => {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        users.map((user) => (
+                        usuariosAtuais.map((user) => (
                           <TableRow key={user.id}>
                             <TableCell>
                               <Checkbox
@@ -887,6 +925,9 @@ const Usuarios = () => {
                               />
                             </TableCell>
                             <TableCell className="font-medium text-era-black">{user.nome}</TableCell>
+                            <TableCell className="text-era-gray-medium font-medium">
+                                {user.empresa || <span className="text-gray-400 italic">-</span>}
+                            </TableCell>
                             <TableCell className="text-era-gray-medium">{user.email}</TableCell>
                             <TableCell className="text-era-gray-medium">
                               <div className="flex items-center gap-1">
@@ -1030,6 +1071,60 @@ const Usuarios = () => {
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* --- COMPONENTE DE PAGINAÇÃO --- */}
+                {!loading && users.length > 0 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-4 border-t border-gray-200 bg-white mt-2 rounded-b-lg gap-4 sm:gap-0">
+                    {/* Texto Informativo */}
+                    <div className="text-sm text-gray-500 text-center sm:text-left">
+                      Mostrando <span className="font-medium text-gray-900">{indexPrimeiroItem + 1}</span> até{' '}
+                      <span className="font-medium text-gray-900">
+                        {Math.min(indexUltimoItem, users.length)}
+                      </span>{' '}
+                      de <span className="font-medium text-gray-900">{users.length}</span> resultados
+                    </div>
+
+                    <div className="flex items-center gap-6">
+                      {/* Seletor de Itens por Página */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600 hidden sm:inline">Linhas por página:</span>
+                        <select
+                          value={itensPorPagina}
+                          onChange={(e) => handleMudarQtdItens(Number(e.target.value))}
+                          className="h-8 w-16 rounded border border-gray-300 bg-white px-2 text-sm focus:border-green-500 focus:outline-none cursor-pointer"
+                        >
+                          <option value={15}>15</option>
+                          <option value={30}>30</option>
+                          <option value={50}>50</option>
+                        </select>
+                      </div>
+
+                      {/* Botões de Navegação */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setPaginaAtual((old) => Math.max(old - 1, 1))}
+                          disabled={paginaAtual === 1}
+                          className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        
+                        <div className="text-sm font-medium min-w-[3rem] text-center">
+                          {paginaAtual} / {totalPaginas}
+                        </div>
+
+                        <button
+                          onClick={() => setPaginaAtual((old) => Math.min(old + 1, totalPaginas))}
+                          disabled={paginaAtual === totalPaginas}
+                          className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
               </CardContent>
             </Card>
           </div>
@@ -1055,6 +1150,20 @@ const Usuarios = () => {
                   className="col-span-3"
                 />
               </div>
+              
+              {/* Campo de Edição de Empresa */}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-empresa" className="text-right">
+                  Empresa
+                </Label>
+                <Input
+                  id="edit-empresa"
+                  value={editingUser.empresa || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, empresa: e.target.value })}
+                  className="col-span-3"
+                />
+              </div>
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-email" className="text-right">
                   Email
@@ -1176,12 +1285,12 @@ const Usuarios = () => {
               selectedUserCertificates.map((certificate, index) => (
                 <Card key={index} className="border border-era-gray-light bg-white/90">
                   <CardHeader className="bg-gradient-to-r from-era-black/5 via-era-gray-medium/10 to-era-green/5 rounded-t-lg">
-                                      <CardTitle className="text-era-black font-bold">
-                    {certificate.cursos?.nome || certificate.categoria || 'Curso'}
-                  </CardTitle>
-                  <CardDescription className="text-era-gray-medium">
-                    Certificado #{certificate.numero_certificado || index + 1}
-                  </CardDescription>
+                    <CardTitle className="text-era-black font-bold">
+                      {certificate.cursos?.nome || certificate.categoria || 'Curso'}
+                    </CardTitle>
+                    <CardDescription className="text-era-gray-medium">
+                      Certificado #{certificate.numero_certificado || index + 1}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="p-4">
                     <div className="grid grid-cols-2 gap-4 text-sm">
@@ -1263,12 +1372,12 @@ const Usuarios = () => {
                 selectedUserProgress.progress.map((item, index) => (
                   <Card key={index} className="border border-era-gray-light bg-white/90">
                     <CardHeader className="bg-gradient-to-r from-era-black/5 via-era-gray-medium/10 to-era-green/5 rounded-t-lg">
-                                          <CardTitle className="text-era-black font-bold">
-                      {item.cursos?.nome || 'Curso'}
-                    </CardTitle>
-                    <CardDescription className="text-era-gray-medium">
-                      Progresso: {item.percentual_concluido || 0}%
-                    </CardDescription>
+                      <CardTitle className="text-era-black font-bold">
+                        {item.cursos?.nome || 'Curso'}
+                      </CardTitle>
+                      <CardDescription className="text-era-gray-medium">
+                        Progresso: {item.percentual_concluido || 0}%
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="p-4">
                       <div className="space-y-3">
