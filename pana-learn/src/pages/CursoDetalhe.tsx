@@ -62,7 +62,7 @@ const ModuleEditForm = ({ modulo, onSaved }: { modulo: Module; onSaved: () => vo
             >
                 {loading ? "Salvando..." : "Salvar"}
             </button>
-            {error && <div className="text-red-500 mt-2">{error}</div>}
+            {error && <div className="text-red-50 mt-2">{error}</div>}
         </div>
     )
 }
@@ -98,6 +98,7 @@ const CursoDetalhe = () => {
 
     const [loading, setLoading] = useState(true)
     const [selectedVideo, setSelectedVideo] = React.useState<VideoWithModulo | null>(null)
+    const [isChangingVideo, setIsChangingVideo] = React.useState(false) // NOVO: Trava de transição de vídeo
     const [selectedModule, setSelectedModule] = React.useState<Module | null>(null)
     const [showUploadModal, setShowUploadModal] = React.useState(false)
     const [showQuizNotification, setShowQuizNotification] = React.useState(false)
@@ -106,6 +107,12 @@ const CursoDetalhe = () => {
     const [progressRefresh, setProgressRefresh] = React.useState(0)
     const [hasShownIntroduction, setHasShownIntroduction] = React.useState(false)
     const [manualQuizCheck, setManualQuizCheck] = React.useState(false)
+
+    // 🎓 ADMIN - CONFIGURAÇÃO DE QUIZ DO CURSO
+    const [linkedQuiz, setLinkedQuiz] = React.useState<any>(null)
+    const [allQuizzes, setAllQuizzes] = React.useState<any[]>([])
+    const [selectedQuizId, setSelectedQuizId] = React.useState("")
+    const [loadingQuizConfig, setLoadingQuizConfig] = React.useState(true)
 
     const [editingModuleId, setEditingModuleId] = React.useState<string | null>(null)
     const [editTitle, setEditTitle] = React.useState("")
@@ -190,7 +197,6 @@ const CursoDetalhe = () => {
 
     const handleGlossaryComplete = () => {
         setGlossaryCompleted(true)
-        // Refresh videos after glossary completion
         setTimeout(() => {
             fetchVideosAndProgress()
         }, 1000)
@@ -270,27 +276,18 @@ const CursoDetalhe = () => {
 
             if (videosError) {
                 console.error("❌ Error fetching videos by curso_id:", videosError)
-            } else {
-                console.log("🔍 CursoDetalhe - Videos found by curso_id:", videosData)
             }
 
             if (videosData && videosData.length > 0) {
-                console.log("✅ Videos found specifically for this course:", videosData)
                 finalVideos = videosData
             } else {
-                console.log("🔍 CursoDetalhe - No videos found by curso_id, checking by category...")
-
                 const { data: cursoData, error: cursoError } = await supabase
                     .from("cursos")
                     .select("categoria")
                     .eq("id", id)
                     .single()
 
-                if (cursoError) {
-                    console.error("❌ Error fetching course:", cursoError)
-                } else if (cursoData?.categoria) {
-                    console.log("🔍 CursoDetalhe - Course category:", cursoData.categoria)
-
+                if (cursoData?.categoria) {
                     const { data: videosByCategory, error: categoryError } = await supabase
                         .from("videos")
                         .select("*")
@@ -298,44 +295,21 @@ const CursoDetalhe = () => {
                         .is("curso_id", null)
                         .order("ordem", { ascending: true })
 
-                    if (categoryError) {
-                        console.error("❌ Error fetching videos by category:", categoryError)
-                    } else {
-                        console.log("🔍 CursoDetalhe - Videos found by category (without curso_id):", videosByCategory)
+                    if (videosByCategory && videosByCategory.length > 0) {
+                        for (const video of videosByCategory) {
+                            await supabase.from("videos").update({ curso_id: id }).eq("id", video.id)
+                        }
 
-                        if (videosByCategory && videosByCategory.length > 0) {
-                            console.log("🔧 CursoDetalhe - Associating orphan videos to current course...")
+                        const { data: updatedVideos } = await supabase
+                            .from("videos")
+                            .select("*")
+                            .eq("curso_id", id)
+                            .order("data_criacao", { ascending: false })
 
-                            for (const video of videosByCategory) {
-                                const { error: updateError } = await supabase.from("videos").update({ curso_id: id }).eq("id", video.id)
-
-                                if (updateError) {
-                                    console.error(`❌ Error associating video ${video.titulo}:`, updateError)
-                                } else {
-                                    console.log(`✅ Video "${video.titulo}" associated to course ${id}`)
-                                }
-                            }
-
-                            const { data: updatedVideos, error: reloadError } = await supabase
-                                .from("videos")
-                                .select("*")
-                                .eq("curso_id", id)
-                                .order("data_criacao", { ascending: false })
-
-                            if (reloadError) {
-                                console.error("❌ Error reloading videos:", reloadError)
-                            } else {
-                                console.log("✅ Videos reloaded after association:", updatedVideos)
-                                finalVideos = updatedVideos || []
-                            }
-                        } else {
-                            console.log("📋 No orphan videos found for this category")
-                            finalVideos = []
+                        if (updatedVideos) {
+                            finalVideos = updatedVideos
                         }
                     }
-                } else {
-                    console.log("📋 No videos found for this specific course")
-                    finalVideos = []
                 }
             }
         } catch (error) {
@@ -343,10 +317,8 @@ const CursoDetalhe = () => {
         }
 
         if (finalVideos.length > 0) {
-            console.log("✅ Videos loaded successfully:", finalVideos)
             setVideos(finalVideos)
         } else {
-            console.log("📋 No videos found for this course")
             setVideos([])
         }
 
@@ -358,18 +330,6 @@ const CursoDetalhe = () => {
                 "video_id",
                 finalVideos.map((v) => v.id),
             )
-
-        console.log("🔍 CursoDetalhe - Progress query result:", {
-            progressData: progressData,
-            progressError: progressError,
-            totalProgress: progressData?.length || 0,
-        })
-
-        if (progressError) {
-            console.error("❌ Error loading progress:", progressError)
-        } else {
-            console.log("✅ Progress loaded successfully:", progressData)
-        }
 
         const progressMap: Record<string, Partial<VideoProgressRow>> = {}
         ;(progressData || []).forEach((p) => {
@@ -383,6 +343,21 @@ const CursoDetalhe = () => {
 
         setLoading(false)
     }
+
+    // NOVO: Função super protegida para lidar com seleção de vídeos (Evita re-render hell)
+    const handleVideoSelect = useCallback((video: VideoWithModulo) => {
+        if (isChangingVideo) return; // Proteção: ignora cliques múltiplos rápidos
+        if (selectedVideo?.id === video.id) return; // Ignora se clicou no vídeo que já está tocando
+
+        setIsChangingVideo(true);
+        setSelectedVideo(null); // Força a desmontagem do player atual imediatamente, abortando requisições
+
+        // Aguarda 300ms para a memória limpar e monta o novo player
+        setTimeout(() => {
+            setSelectedVideo(video);
+            setIsChangingVideo(false);
+        }, 300);
+    }, [isChangingVideo, selectedVideo]);
 
     const getNextVideo = useCallback(
         (currentVideoId: string) => {
@@ -405,11 +380,11 @@ const CursoDetalhe = () => {
             if (nextVideo) {
                 const nextVideoData = videos.find((v) => v.id === nextVideo.id)
                 if (nextVideoData) {
-                    setSelectedVideo(nextVideoData)
+                    handleVideoSelect(nextVideoData) // Modificado para usar o sistema de transição segura
                 }
             }
         },
-        [videos, getNextVideo],
+        [videos, getNextVideo, handleVideoSelect],
     )
 
     const handleVideoProgressChange = useCallback(
@@ -528,8 +503,6 @@ const CursoDetalhe = () => {
     const createDefaultModules = async () => {
         if (!isAdmin && modules.length === 0 && videos.length > 0) {
             try {
-                console.log("🔧 Creating default modules for course...")
-
                 const { data: introModule, error: introError } = await supabase
                     .from("modulos")
                     .insert({
@@ -540,12 +513,6 @@ const CursoDetalhe = () => {
                     })
                     .select()
                     .single()
-
-                if (introError) {
-                    console.error("❌ Error creating Introduction module:", introError)
-                } else {
-                    console.log("✅ Introduction module created:", introModule)
-                }
             } catch (error) {
                 console.error("❌ Error creating default modules:", error)
             }
@@ -560,8 +527,6 @@ const CursoDetalhe = () => {
     React.useEffect(() => {
         if (!userId || !id) return
 
-        console.log("🔄 Setting up real-time subscription for course progress")
-
         const subscription = supabase
             .channel(`course_progress_${id}_${userId}`)
             .on(
@@ -573,41 +538,21 @@ const CursoDetalhe = () => {
                     filter: `user_id=eq.${userId}`,
                 },
                 (payload) => {
-                    console.log("🔄 Real-time course progress update:", payload)
                     if (payload.eventType === "UPDATE" || payload.eventType === "INSERT") {
                         const newProgress = payload.new as VideoProgressRow
                         setProgress((prev) => ({
                             ...prev,
                             [newProgress.video_id]: newProgress,
                         }))
-                        // Recalculate progress without full reload
                         setTimeout(() => {
                             calculateCourseProgress()
                         }, 500)
                     }
                 },
             )
-            .on(
-                "postgres_changes",
-                {
-                    event: "*",
-                    schema: "public",
-                    table: "progresso_quiz",
-                    filter: `usuario_id=eq.${userId}`,
-                },
-                (payload) => {
-                    console.log("🔄 Real-time quiz progress update:", payload)
-                    setTimeout(() => {
-                        checkQuizAvailability()
-                    }, 500)
-                },
-            )
-            .subscribe((status) => {
-                console.log("🔄 Subscription status:", status)
-            })
+            .subscribe()
 
         return () => {
-            console.log("🔄 Cleaning up course progress subscription")
             supabase.removeChannel(subscription)
         }
     }, [userId, id])
@@ -616,9 +561,45 @@ const CursoDetalhe = () => {
         calculateCourseProgress()
     }, [calculateCourseProgress])
 
+    // 🎓 ADMIN - CARREGAR QUIZ VINCULADO AO CURSO
+    React.useEffect(() => {
+        if (!id || !isAdmin) return
+
+        const loadQuizConfig = async () => {
+            try {
+                setLoadingQuizConfig(true)
+
+                const { data: mapping } = await supabase
+                    .from("curso_quiz_mapping")
+                    .select("quiz_id, quizzes(*)")
+                    .eq("curso_id", id)
+                    .maybeSingle()
+
+                if (mapping?.quizzes) {
+                    setLinkedQuiz(mapping.quizzes)
+                    setSelectedQuizId(mapping.quiz_id)
+                }
+
+                const { data: quizzes } = await supabase
+                    .from("quizzes")
+                    .select("*")
+                    .eq("ativo", true)
+                    .order("titulo")
+
+                if (quizzes) setAllQuizzes(quizzes)
+
+            } catch (err) {
+                console.error("Erro carregando quiz config:", err)
+            } finally {
+                setLoadingQuizConfig(false)
+            }
+        }
+
+        loadQuizConfig()
+    }, [id, isAdmin, supabase])
+
     React.useEffect(() => {
         if (quizState.shouldShowQuiz && !quizCompleted && !quizShown) {
-            console.log("🎯 Course completed! Showing quiz notification...")
             setShowQuizNotification(true)
             setQuizShown(true)
         }
@@ -639,14 +620,9 @@ const CursoDetalhe = () => {
             })
 
             const allCompleted = completedVideos.length === videos.length
-
-            console.log(`  Progress monitoring: ${completedVideos.length}/${videos.length} videos completed`)
-
             setCompletedVideos(completedVideos.length)
 
-            // Only trigger if manually requested
             if (allCompleted && videos.length > 0 && !quizState.quizAlreadyCompleted && !quizShown && manualQuizCheck) {
-                console.log("All videos completed detected! Forcing quiz check...")
                 handleCourseComplete(id || "")
             }
         }
@@ -660,8 +636,6 @@ const CursoDetalhe = () => {
 
     React.useEffect(() => {
         const handleVideoCompleted = (event: CustomEvent) => {
-            console.log("🔄 Video completion event received:", event.detail)
-            // Immediately refresh progress and video list
             setTimeout(() => {
                 calculateCourseProgress()
                 fetchVideosAndProgress()
@@ -679,15 +653,6 @@ const CursoDetalhe = () => {
         return v.curso_id === id
     })
 
-    if (process.env.NODE_ENV === "development") {
-        console.log("🔍 CursoDetalhe - Filtered videos:", {
-            totalVideos: videos.length,
-            filteredVideosCount: filteredVideos.length,
-            currentCourseId: id,
-            currentCategory: currentCategory,
-        })
-    }
-
     const totalProgress = Object.values(progress).reduce((acc, p) => acc + (p.percentual_assistido || 0), 0)
     const averageProgress = videos.length > 0 ? totalProgress / videos.length : 0
 
@@ -699,12 +664,6 @@ const CursoDetalhe = () => {
             return isCompleted
         })
 
-    // React.useEffect(() => {
-    //   if (isCourseComplete && !certificate && quizConfig) {
-    //     setShowQuizModal(true)
-    //   }
-    // }, [isCourseComplete, certificate, quizConfig])
-
     const handleViewCertificate = () => {
         if (certificate) {
             window.open(`/certificado/${certificate.id}`, "_blank")
@@ -715,6 +674,49 @@ const CursoDetalhe = () => {
         setManualQuizCheck(true)
         if (isCourseComplete) {
             handleCourseComplete(id || "")
+        }
+    }
+
+    const handleSaveQuizLink = async () => {
+        if (!selectedQuizId || !id) {
+            toast({
+                title: "Selecione um quiz",
+                description: "Escolha um quiz antes de salvar.",
+            })
+            return
+        }
+
+        try {
+            setLoadingQuizConfig(true)
+
+            await supabase
+                .from("curso_quiz_mapping")
+                .delete()
+                .eq("curso_id", id)
+
+            const { error } = await supabase
+                .from("curso_quiz_mapping")
+                .insert({
+                    curso_id: id,
+                    quiz_id: selectedQuizId
+                })
+
+            if (error) throw error
+
+            toast({
+                title: "Quiz vinculado!",
+                description: "Este curso agora possui prova final 🎉",
+            })
+
+            setRefresh(prev => prev + 1)
+
+        } catch (err) {
+            toast({
+                title: "Erro ao salvar",
+                description: "Não foi possível vincular o quiz.",
+            })
+        } finally {
+            setLoadingQuizConfig(false)
         }
     }
 
@@ -737,12 +739,7 @@ const CursoDetalhe = () => {
                     {isAdmin && (
                         <div className="flex gap-2">
                             <Button
-                                onClick={() => {
-                                    console.log("🎯 Add Video button clicked!")
-                                    console.log("🎯 showVideoUpload before:", showVideoUpload)
-                                    setShowVideoUpload(true)
-                                    console.log("🎯 showVideoUpload after:", true)
-                                }}
+                                onClick={() => setShowVideoUpload(true)}
                                 className="bg-era-green hover:bg-era-green/90 text-era-black"
                             >
                                 <PlusCircle className="h-4 w-4 mr-2" />
@@ -751,6 +748,48 @@ const CursoDetalhe = () => {
                         </div>
                     )}
                 </div>
+
+                {/* 🎓 ADMIN - CONFIGURAR QUIZ DO CURSO */}
+                {isAdmin && (
+                    <div className="mb-8 bg-white rounded-2xl shadow-lg p-6 border border-era-green/20">
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">
+                            Configuração da Prova Final
+                        </h2>
+
+                        {loadingQuizConfig ? (
+                            <p className="text-gray-500">Carregando quizzes...</p>
+                        ) : (
+                            <div className="flex flex-col md:flex-row gap-4 items-center">
+                                
+                                <select
+                                    className="border rounded-lg px-4 py-2 w-full md:w-96"
+                                    value={selectedQuizId}
+                                    onChange={(e) => setSelectedQuizId(e.target.value)}
+                                >
+                                    <option value="">Selecione um quiz</option>
+                                    {allQuizzes.map((quiz) => (
+                                        <option key={quiz.id} value={quiz.id}>
+                                            {quiz.titulo}
+                                        </option>
+                                    ))}
+                                </select>
+
+                                <Button
+                                    onClick={handleSaveQuizLink}
+                                    className="bg-era-green text-era-black"
+                                >
+                                    Salvar vínculo
+                                </Button>
+                            </div>
+                        )}
+
+                        {linkedQuiz && (
+                            <p className="text-sm text-green-600 mt-4">
+                                Quiz atualmente vinculado: <strong>{linkedQuiz.titulo}</strong>
+                            </p>
+                        )}
+                    </div>
+                )}
 
                 {/* NVIDIA Course Glossary Requirement */}
                 {isNVIDIACourse && !glossaryCompleted && !checkingGlossary && (
@@ -802,8 +841,8 @@ const CursoDetalhe = () => {
                     </div>
                 )}
 
-                {/* Regular course introduction for non-NVIDIA or completed glossary */}
-                {(!isNVIDIACourse || glossaryCompleted) && videos.length > 0 && !selectedVideo && hasShownIntroduction && (
+                {/* Regular course introduction */}
+                {(!isNVIDIACourse || glossaryCompleted) && videos.length > 0 && !selectedVideo && !isChangingVideo && hasShownIntroduction && (
                     <div className="mb-6 bg-white rounded-2xl shadow-lg p-8">
                         <div className="text-center">
                             <div className="w-20 h-20 bg-era-green/20 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -847,7 +886,7 @@ const CursoDetalhe = () => {
                     </div>
                 )}
 
-                {/* Progress Bar - only show if glossary is completed or not NVIDIA course */}
+                {/* Progress Bar */}
                 {(!isNVIDIACourse || glossaryCompleted) && videos.length > 0 && (
                     <div className="mb-6">
                         <div className="flex items-center justify-between mb-2">
@@ -858,7 +897,7 @@ const CursoDetalhe = () => {
                     </div>
                 )}
 
-                {/* Loading State */}
+                {/* Loading State Master */}
                 {loading && (
                     <div className="flex items-center justify-center py-12">
                         <div className="text-center">
@@ -868,12 +907,17 @@ const CursoDetalhe = () => {
                     </div>
                 )}
 
-                {/* Main Content - only show if glossary is completed or not NVIDIA course */}
+                {/* Main Content */}
                 {!loading && (!isNVIDIACourse || glossaryCompleted) && (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Player e Comentários */}
                         <div className="lg:col-span-2 flex flex-col gap-6">
-                            {selectedVideo ? (
+                            {isChangingVideo ? (
+                                <div className="bg-white rounded-2xl shadow-lg p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
+                                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-era-green mb-4"></div>
+                                    <p className="text-gray-600">Preparando vídeo...</p>
+                                </div>
+                            ) : selectedVideo ? (
                                 <div className="bg-white rounded-2xl shadow-lg p-6 mb-2">
                                     {/* Player de Vídeo */}
                                     <VideoPlayerWithProgress
@@ -922,20 +966,21 @@ const CursoDetalhe = () => {
                                     )}
                                 </div>
                             ) : (
-                                <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-                                    <Video className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                    <h3 className="text-lg font-medium text-gray-900 mb-2">Selecione um vídeo para começar</h3>
-                                    <p className="text-gray-600">Clique em um vídeo da lista ao lado para iniciar seus estudos.</p>
-                                </div>
+                                !hasShownIntroduction && (
+                                    <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
+                                        <Video className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                                        <h3 className="text-lg font-medium text-gray-900 mb-2">Selecione um vídeo para começar</h3>
+                                        <p className="text-gray-600">Clique em um vídeo da lista ao lado para iniciar seus estudos.</p>
+                                    </div>
+                                )
                             )}
 
                             {/* Comentários */}
-                            {selectedVideo && <CommentsSection videoId={selectedVideo.id} />}
+                            {selectedVideo && !isChangingVideo && <CommentsSection videoId={selectedVideo.id} />}
                         </div>
 
-                        {/* Sidebar */}
+                        {/* Sidebar de Vídeos */}
                         <div className="space-y-6">
-                            {/* Lista de Vídeos */}
                             <div className="bg-white rounded-2xl shadow-lg p-6">
                                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                                     <Video className="h-5 w-5 text-era-green" />
@@ -952,8 +997,7 @@ const CursoDetalhe = () => {
                                     <div className="space-y-2">
                                         {videos.map((video, index) => {
                                             const videoProgress = progress[video.id]
-                                            const isCompleted =
-                                                videoProgress?.concluido === true || videoProgress?.percentual_assistido >= 100
+                                            const isCompleted = videoProgress?.concluido === true || videoProgress?.percentual_assistido >= 100
                                             const isSelected = selectedVideo?.id === video.id
                                             const isLocked = isNVIDIACourse && !glossaryCompleted
 
@@ -963,11 +1007,13 @@ const CursoDetalhe = () => {
                                                     className={`p-3 rounded-lg transition-all duration-200 ${
                                                         isLocked
                                                             ? "bg-gray-100 cursor-not-allowed opacity-60"
-                                                            : isSelected
+                                                            : isChangingVideo 
+                                                                ? "opacity-50 cursor-wait" 
+                                                                : isSelected
                                                                 ? "bg-era-green/20 border border-era-green/30 cursor-pointer"
                                                                 : "bg-gray-50 hover:bg-gray-100 border border-transparent cursor-pointer"
                                                     }`}
-                                                    onClick={() => !isLocked && setSelectedVideo(video)}
+                                                    onClick={() => !isLocked && !isChangingVideo && handleVideoSelect(video)}
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         <div className="flex-shrink-0">
@@ -984,12 +1030,12 @@ const CursoDetalhe = () => {
                                                             <div className="flex items-center gap-2 mt-1">
                                                                 <Clock className="h-3 w-3 text-gray-400" />
                                                                 <span className="text-xs text-gray-500">
-                                  {video.duracao ? `${Math.round(video.duracao / 60)} min` : "Duração não definida"}
-                                </span>
+                                                                    {video.duracao ? `${Math.round(video.duracao / 60)} min` : "Duração não definida"}
+                                                                </span>
                                                                 {videoProgress && !isLocked && (
                                                                     <span className="text-xs text-era-black font-medium">
-                                    {Math.round(videoProgress.percentual_assistido || 0)}% completo
-                                  </span>
+                                                                        {Math.round(videoProgress.percentual_assistido || 0)}% completo
+                                                                    </span>
                                                                 )}
                                                                 {isLocked && <span className="text-xs text-amber-600 font-medium">Bloqueado</span>}
                                                             </div>
@@ -1002,7 +1048,7 @@ const CursoDetalhe = () => {
                                 )}
                             </div>
 
-                            {/* Estatísticas - only show if not locked */}
+                            {/* Estatísticas */}
                             {(!isNVIDIACourse || glossaryCompleted) && videos.length > 0 && (
                                 <div className="bg-white rounded-2xl shadow-lg p-6">
                                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -1017,15 +1063,11 @@ const CursoDetalhe = () => {
                                         <div className="flex justify-between">
                                             <span className="text-sm text-gray-600">Vídeos concluídos</span>
                                             <span className="text-sm font-medium text-era-green">
-                        {
-                            videos.filter((v) => {
-                                const videoProgress = progress[v.id]
-                                const isCompleted =
-                                    videoProgress?.concluido === true || videoProgress?.percentual_assistido >= 100
-                                return isCompleted
-                            }).length
-                        }
-                      </span>
+                                                {videos.filter((v) => {
+                                                    const videoProgress = progress[v.id]
+                                                    return videoProgress?.concluido === true || videoProgress?.percentual_assistido >= 100
+                                                }).length}
+                                            </span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-sm text-gray-600">Progresso geral</span>
@@ -1056,7 +1098,7 @@ const CursoDetalhe = () => {
                     </div>
                 )}
 
-                {/* Notificação de Quiz (Não-intrusiva) */}
+                {/* Notificação de Quiz */}
                 <QuizCompletionNotification
                     courseId={id || ""}
                     courseName={currentCourseData?.nome || ""}
@@ -1071,7 +1113,6 @@ const CursoDetalhe = () => {
                     passPercentage={quizSettings.PASS_PERCENTAGE}
                 />
 
-                {/* Modal de Quiz */}
                 <EnhancedQuizModal
                     courseId={id || ""}
                     courseName={currentCourseData?.nome || ""}
@@ -1080,16 +1121,12 @@ const CursoDetalhe = () => {
                     onQuizComplete={handleQuizComplete}
                 />
 
-                {/* Video Upload Modal */}
+                {/* Upload Modal */}
                 {showVideoUpload && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <VideoUpload
-                            onClose={() => {
-                                console.log("🎯 Closing VideoUpload modal")
-                                setShowVideoUpload(false)
-                            }}
+                            onClose={() => setShowVideoUpload(false)}
                             onSuccess={() => {
-                                console.log("🎯 Upload success, closing modal")
                                 setShowVideoUpload(false)
                                 setRefresh((prev) => prev + 1)
                             }}

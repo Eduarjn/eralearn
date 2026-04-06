@@ -44,6 +44,8 @@ const menuItems = [
             { label: "White-Label", path: "/configuracoes/whitelabel", roles: ["admin", "admin_master"] },
             { label: "Integrações & API", path: "/configuracoes/integracoes", roles: ["admin", "admin_master"] },
             { label: "Segurança", path: "/configuracoes/seguranca", roles: ["admin", "admin_master"] },
+            // Nova opção de Logs de Auditoria restrita ao admin_master
+            { label: "Logs de Auditoria", path: "/configuracoes/logs", roles: ["admin_master"] },
         ],
     },
 ]

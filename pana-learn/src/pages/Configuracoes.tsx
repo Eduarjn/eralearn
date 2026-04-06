@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Routes, Route, Outlet } from 'react-router-dom';
 import { usePreferences, FontSize, Language } from '@/pages/PreferencesContext.tsx';
 import { useBranding } from '@/context/BrandingContext';
+import AuditLogs from './AuditLogs';
 
 
 // Componente Preferências
@@ -1631,6 +1632,7 @@ const Configuracoes = () => {
 
           <Route path="/integracoes" element={<Integracoes />} />
           <Route path="/seguranca" element={<Seguranca />} />
+          <Route path="/logs" element={<AuditLogs />} />
         </Routes>
       </div>
     </ERALayout>
